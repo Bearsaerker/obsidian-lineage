@@ -50,6 +50,8 @@ import { loadFullDocument } from 'src/stores/view/subscriptions/actions/document
 import { refreshActiveViewOfDocument } from 'src/stores/plugin/actions/refresh-active-view-of-document';
 import { detectDocumentFormat } from 'src/lib/format-detection/detect-document-format';
 import { LineageDocumentFormat } from 'src/stores/settings/settings-type';
+import { TreeNode } from 'src/lib/data-conversion/x-to-json/columns-to-json';
+import { jsonToColumns } from 'src/lib/data-conversion/json-to-x/json-to-columns';
 
 export const LINEAGE_VIEW_TYPE = 'lineage';
 
@@ -186,7 +188,13 @@ export class LineageView extends TextFileView {
         onPluginError(error, location, action);
     };
 
+    get isTree() {
+        return this.file?.extension === 'tree';
+    }
+
     saveDocument = async () => {
+        if (this.isTree) return;
+
         invariant(this.file);
         const state = clone(this.documentStore.getValue());
         const data: string =
@@ -204,14 +212,24 @@ export class LineageView extends TextFileView {
     private loadInitialData = async () => {
         invariant(this.file);
 
-        const pluginState = this.plugin.store.getValue();
-        const fileHasAStore = pluginState.documents[this.file.path];
-        if (fileHasAStore) {
-            this.useExistingStore();
+        if (this.isTree) {
+            if (this.plugin.lineageTree) {
+                const nodes = await this.plugin.lineageTree.getData(this.file);
+                if (nodes) {
+                    this.__loadNodes__(nodes);
+                }
+            }
         } else {
-            this.createStore();
+            const pluginState = this.plugin.store.getValue();
+            const fileHasAStore = pluginState.documents[this.file.path];
+            if (fileHasAStore) {
+                this.useExistingStore();
+            } else {
+                this.createStore();
+            }
+            this.loadDocumentToStore('view-mount');
         }
-        this.loadDocumentToStore('view-mount');
+
         if (!this.inlineEditor) {
             this.inlineEditor = new InlineEditor(this);
             await this.inlineEditor.onload();
@@ -279,6 +297,34 @@ export class LineageView extends TextFileView {
         }
     };
 
+    private __nodes__: TreeNode[] = [];
+    __loadNodes__ = (nodes: TreeNode[]) => {
+        if (JSON.stringify(nodes) === JSON.stringify(this.__nodes__))
+            return false;
+
+        const documentState = this.documentStore.getValue();
+        const viewState = this.viewStore.getValue();
+
+        const activeNode = viewState.document.activeNode;
+        const activeSection = activeNode
+            ? documentState.sections.id_section[activeNode]
+            : null;
+        this.documentStore.dispatch({
+            type: 'document/file/load-from-disk',
+            payload: {
+                __test_document__: jsonToColumns(nodes),
+                activeSection,
+            },
+        });
+        this.__nodes__ = nodes;
+        setTimeout(() => {
+            this.alignBranch.align({
+                type: 'view/life-cycle/mount',
+            });
+        }, 0);
+        return true;
+    };
+
     private getDocumentFormat(body: string) {
         let format: LineageDocumentFormat;
         format = getPersistedDocumentFormat(this, false);
@@ -312,4 +358,10 @@ export class LineageView extends TextFileView {
         invariant(this.minimapStore);
         return this.minimapStore;
     }
+
+    setIsLoading = (isLoading: boolean) => {
+        const main = this.contentEl.firstChild as HTMLDivElement | null;
+        if (!main) return;
+        main.toggleClass('is-loading', isLoading);
+    };
 }

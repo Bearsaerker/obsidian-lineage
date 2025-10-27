@@ -126,4 +126,9 @@ export default class Lineage extends Plugin {
         rulesWorker.terminate();
         statusBarWorker.terminate();
     }
+
+    get lineageTree() {
+        // @ts-expect-error
+        return this.app.plugins.plugins['lineage-tree'];
+    }
 }

@@ -11,13 +11,20 @@ import { LineageDocumentFormat } from 'src/stores/settings/settings-type';
 import { outlineToJson } from 'src/lib/data-conversion/x-to-json/outline-to-json';
 import { htmlElementToJson } from 'src/lib/data-conversion/x-to-json/html-element-to-json';
 
+export type LoadJSONDocumentAction = {
+    type: 'document/file/load-from-disk';
+    payload: {
+        activeSection: string | null;
+        __test_document__?: LineageDocument;
+    };
+};
+
 export type LoadDocumentAction = {
     type: 'document/file/load-from-disk';
     payload: {
+        activeSection: string | null;
         document: SavedDocument;
         format: LineageDocumentFormat;
-        activeSection: string | null;
-        __test_document__?: LineageDocument;
     };
 };
 

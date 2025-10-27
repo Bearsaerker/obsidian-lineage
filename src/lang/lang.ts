@@ -13,6 +13,7 @@ export const lang = {
     // create document
     cmd_create_new_document: 'Create new document',
     ocm_new_document: 'New document',
+    ocm_new_tree: 'New tree',
     ocm_import_from_gingko: 'Import from Gingko',
 
     // add sections

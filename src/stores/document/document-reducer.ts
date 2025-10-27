@@ -1,6 +1,9 @@
 import { insertNode } from 'src/stores/document/reducers/insert-node/insert-node';
 import { dropNode } from 'src/stores/document/reducers/drop-node/drop-node';
-import { loadDocumentFromFile } from 'src/stores/document/reducers/load-document-from-file/load-document-from-file';
+import {
+    LoadDocumentAction,
+    loadDocumentFromFile,
+} from 'src/stores/document/reducers/load-document-from-file/load-document-from-file';
 import { setNodeContent } from 'src/stores/document/reducers/content/set-node-content';
 import { deleteNode } from 'src/stores/document/reducers/delete-node/delete-node';
 import { moveNode } from 'src/stores/document/reducers/move-node/move-node';
@@ -96,13 +99,16 @@ const updateDocumentState = (
         newActiveNodeId = action.payload.id;
         affectedNodeId = newActiveNodeId;
     } else if (action.type === 'document/file/load-from-disk') {
-        if (action.payload.__test_document__) {
+        if ('__test_document__' in action.payload) {
             newActiveNodeId = loadDocumentFromJSON(
                 state,
-                action.payload.__test_document__,
+                action.payload.__test_document__!,
             );
         } else {
-            newActiveNodeId = loadDocumentFromFile(state, action);
+            newActiveNodeId = loadDocumentFromFile(
+                state,
+                action as LoadDocumentAction,
+            );
         }
     } else if (action.type === 'document/history/select-snapshot') {
         selectSnapshot(state.document, state.history, action);

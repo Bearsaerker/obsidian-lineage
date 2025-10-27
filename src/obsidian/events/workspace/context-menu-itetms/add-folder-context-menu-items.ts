@@ -14,4 +14,13 @@ export const addFolderContextMenuItems = (
         item.setIcon(customIcons.cards.name);
         item.onClick(() => createLineageFileInFolder(plugin, folder));
     });
+    if (plugin.lineageTree) {
+        menu.addItem((item) => {
+            item.setTitle(lang.ocm_new_tree);
+            item.setIcon(customIcons.cards.name);
+            item.onClick(() =>
+                createLineageFileInFolder(plugin, folder, 'tree'),
+            );
+        });
+    }
 };
