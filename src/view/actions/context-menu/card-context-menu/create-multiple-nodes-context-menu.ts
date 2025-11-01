@@ -13,16 +13,22 @@ export const createMultipleNodesContextMenu = (view: LineageView) => {
             icon: 'documents',
             submenu: [
                 {
+                    disabled: view.isTree,
                     title: lang.cm_copy_branches,
                     icon: 'lineage-cards',
                     action: () =>
-                        copyActiveBranchesToClipboard(view, true, false),
+                        copyActiveBranchesToClipboard(view, true, false, false),
                 },
                 {
                     title: lang.cm_copy_branches_wo_formatting,
                     icon: 'file-text',
                     action: () =>
-                        copyActiveBranchesToClipboard(view, false, false),
+                        copyActiveBranchesToClipboard(
+                            view,
+                            false,
+                            false,
+                            view.isTree,
+                        ),
                 },
                 {
                     title: lang.cm_copy_node_wo_subitems,
@@ -44,12 +50,12 @@ export const createMultipleNodesContextMenu = (view: LineageView) => {
                 {
                     title: lang.cmd_export_branches_with_subitems,
                     icon: 'file-text',
-                    action: () => exportSelection(view, true),
+                    action: () => exportSelection(view, true, view!.isTree),
                 },
                 {
                     title: lang.cmd_export_nodes_wo_subitems,
                     icon: 'file-text',
-                    action: () => exportSelection(view, false),
+                    action: () => exportSelection(view, false, false),
                 },
             ],
         },

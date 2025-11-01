@@ -10,6 +10,7 @@ import { getPersistedDocumentFormat } from 'src/obsidian/events/workspace/helper
 import { branchToOutline } from 'src/lib/data-conversion/branch-to-x/branch-to-outline';
 import { branchToHtmlElement } from 'src/lib/data-conversion/branch-to-x/branch-to-html-element';
 import { saveNodeContent } from 'src/view/actions/keyboard-shortcuts/helpers/commands/commands/helpers/save-node-content';
+import { getLinkPaneType } from 'src/view/components/container/column/components/group/components/card/components/content/event-handlers/handle-links/block-link/handle-global-block-link';
 
 export const extractBranch = async (view: LineageView) => {
     try {
@@ -52,7 +53,8 @@ export const extractBranch = async (view: LineageView) => {
             text,
             fileName,
         );
-        await openFileInLineage(view.plugin, newFile, format, 'split');
+        const newLeaf = getLinkPaneType(view.plugin, false);
+        await openFileInLineage(view.plugin, newFile, format, newLeaf);
 
         view.documentStore.dispatch({
             type: 'document/extract-node',

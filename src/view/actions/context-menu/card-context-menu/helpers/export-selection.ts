@@ -9,6 +9,7 @@ import { mapBranchesToText } from 'src/view/actions/keyboard-shortcuts/helpers/c
 export const exportSelection = async (
     view: LineageView,
     includeSubItems: boolean,
+    formatHeadings: boolean,
 ) => {
     const viewState = view.viewStore.getValue();
 
@@ -16,7 +17,7 @@ export const exportSelection = async (
     if (isEditing) {
         saveNodeContent(view);
         setTimeout(() => {
-            exportSelection(view, includeSubItems);
+            exportSelection(view, includeSubItems, formatHeadings);
         }, 100);
         return;
     }
@@ -25,10 +26,12 @@ export const exportSelection = async (
 
     const nodes = getActiveNodes(view, false);
     if (includeSubItems) {
+        const documentState = view.documentStore.getValue();
         text = mapBranchesToText(
-            view.documentStore.getValue().document,
+            documentState.document,
             nodes,
             'unformatted-text',
+            formatHeadings ? documentState.sections : undefined,
         );
     } else {
         text = getTextOfFlatNodes(view, nodes, false);

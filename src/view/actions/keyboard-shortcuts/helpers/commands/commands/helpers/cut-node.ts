@@ -3,7 +3,7 @@ import { copyActiveBranchesToClipboard } from 'src/view/actions/keyboard-shortcu
 
 export const cutNode = async (view: LineageView) => {
     const document = view.viewStore.getValue().document;
-    await copyActiveBranchesToClipboard(view, true, false);
+    await copyActiveBranchesToClipboard(view, !view.isTree, false, view.isTree);
     view.documentStore.dispatch({
         type: 'document/cut-node',
         payload: {

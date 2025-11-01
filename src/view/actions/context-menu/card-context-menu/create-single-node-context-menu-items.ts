@@ -68,6 +68,7 @@ export const createSingleNodeContextMenuItems = (
 
         { type: 'separator' },
         {
+            disabled: view.isTree,
             title: lang.cm_copy_link_to_block,
             icon: 'links-coming-in',
             action: () => copyLinkToBlock(view, false),
@@ -84,16 +85,27 @@ export const createSingleNodeContextMenuItems = (
                   icon: 'documents',
                   submenu: [
                       {
+                          disabled: view.isTree,
                           title: lang.cm_copy_branch,
                           icon: 'lineage-cards',
                           action: () =>
-                              copyActiveBranchesToClipboard(view, true, false),
+                              copyActiveBranchesToClipboard(
+                                  view,
+                                  true,
+                                  false,
+                                  false,
+                              ),
                       },
                       {
                           title: lang.cm_copy_branch_wo_formatting,
                           icon: 'file-text',
                           action: () =>
-                              copyActiveBranchesToClipboard(view, false, false),
+                              copyActiveBranchesToClipboard(
+                                  view,
+                                  false,
+                                  false,
+                                  view.isTree,
+                              ),
                       },
                       {
                           title: lang.cm_copy_nodes_wo_subitems,
@@ -124,6 +136,7 @@ export const createSingleNodeContextMenuItems = (
         },
         { type: 'separator' },
         {
+            disabled: view.isTree,
             title: hasChildren
                 ? lang.cm_extract_branch
                 : lang.cm_extract_section,
@@ -134,7 +147,7 @@ export const createSingleNodeContextMenuItems = (
             ? {
                   title: lang.cm_export_section,
                   icon: 'file-text',
-                  action: () => exportSelection(view, false),
+                  action: () => exportSelection(view, false, false),
               }
             : {
                   title: lang.cm_export_selection,
@@ -143,12 +156,13 @@ export const createSingleNodeContextMenuItems = (
                       {
                           title: lang.cm_export_branch_with_subitems,
                           icon: 'file-text',
-                          action: () => exportSelection(view, true),
+                          action: () =>
+                              exportSelection(view, true, view!.isTree),
                       },
                       {
                           title: lang.cm_export_branch_wo_subitems,
                           icon: 'file-text',
-                          action: () => exportSelection(view, false),
+                          action: () => exportSelection(view, false, false),
                       },
                   ],
               },

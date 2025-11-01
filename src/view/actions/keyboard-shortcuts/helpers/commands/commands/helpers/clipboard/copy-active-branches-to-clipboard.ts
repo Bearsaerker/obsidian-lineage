@@ -7,12 +7,15 @@ export const copyActiveBranchesToClipboard = async (
     view: LineageView,
     formatted: boolean,
     isInSidebar: boolean,
+    formatHeadings: boolean,
 ) => {
     const nodes = getActiveNodes(view, isInSidebar);
+    const documentState = view.documentStore.getValue();
     const text = mapBranchesToText(
-        view.documentStore.getValue().document,
+        documentState.document,
         nodes,
         formatted ? getPersistedDocumentFormat(view) : 'unformatted-text',
+        formatHeadings ? documentState.sections : undefined,
     );
     await navigator.clipboard.writeText(text);
 };

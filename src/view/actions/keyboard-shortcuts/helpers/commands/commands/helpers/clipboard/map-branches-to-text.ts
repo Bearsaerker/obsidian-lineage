@@ -2,15 +2,25 @@ import { getBranch } from 'src/view/actions/keyboard-shortcuts/helpers/commands/
 import { branchToHtmlComment } from 'src/lib/data-conversion/branch-to-x/branch-to-html-comment';
 import { branchToOutline } from 'src/lib/data-conversion/branch-to-x/branch-to-outline';
 import { LineageDocumentFormat } from 'src/stores/settings/settings-type';
-import { LineageDocument } from 'src/stores/document/document-state-type';
+import {
+    LineageDocument,
+    Sections,
+} from 'src/stores/document/document-state-type';
 import { branchToHtmlElement } from 'src/lib/data-conversion/branch-to-x/branch-to-html-element';
 import { branchToText } from 'src/lib/data-conversion/branch-to-x/branch-to-text';
+import { clone } from 'src/helpers/clone';
+import { formatHeadings } from 'src/stores/document/reducers/content/format-content/format-headings';
 
 export const mapBranchesToText = (
     document: LineageDocument,
     nodes: Array<string>,
     format: LineageDocumentFormat | 'unformatted-text',
+    sections?: Sections,
 ) => {
+    if (sections) {
+        document = clone(document);
+        formatHeadings(document.content, sections);
+    }
     const branches = nodes.map((node) =>
         getBranch(document.columns, document.content, node, 'copy'),
     );

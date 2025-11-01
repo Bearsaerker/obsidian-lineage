@@ -28,7 +28,7 @@ const createCommands = (plugin: Lineage) => {
         checkCallback: (checking) => {
             const file = getActiveFile(plugin);
             if (file) {
-                if (checking) return true;
+                if (checking) return file.extension === 'md';
                 else {
                     toggleFileViewType(plugin, file, undefined);
                 }
@@ -123,7 +123,7 @@ const createCommands = (plugin: Lineage) => {
         checkCallback: (checking) => {
             const view = getActiveLineageView(plugin);
             if (checking) {
-                return Boolean(view);
+                return Boolean(view) && !view!.isTree;
             }
             copyLinkToBlock(view!, false);
         },
@@ -159,7 +159,7 @@ const createCommands = (plugin: Lineage) => {
         checkCallback: (checking) => {
             const view = getActiveLineageView(plugin);
             if (checking) {
-                return Boolean(view);
+                return Boolean(view) && !view!.isTree;
             }
             extractBranch(view!);
         },
@@ -173,7 +173,7 @@ const createCommands = (plugin: Lineage) => {
             if (checking) {
                 return Boolean(view);
             }
-            exportSelection(view!, true);
+            exportSelection(view!, true, view!.isTree);
         },
     });
 
@@ -185,7 +185,7 @@ const createCommands = (plugin: Lineage) => {
             if (checking) {
                 return Boolean(view);
             }
-            exportSelection(view!, false);
+            exportSelection(view!, false, false);
         },
     });
 
@@ -207,7 +207,7 @@ const createCommands = (plugin: Lineage) => {
         checkCallback: (checking) => {
             const view = getActiveLineageView(plugin);
             if (checking) {
-                return Boolean(view);
+                return Boolean(view) && !view!.isTree;
             }
             ejectDocument(view!);
         },

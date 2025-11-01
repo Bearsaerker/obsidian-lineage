@@ -14,7 +14,12 @@ export const clipboardCommands = () => {
                     return;
                 }
                 event.preventDefault();
-                copyActiveBranchesToClipboard(view, true, false);
+                copyActiveBranchesToClipboard(
+                    view,
+                    !view.isTree,
+                    false,
+                    view.isTree,
+                );
             },
             hotkeys: [
                 { key: 'C', modifiers: ['Mod'], editorState: 'editor-off' },
@@ -24,7 +29,7 @@ export const clipboardCommands = () => {
             name: 'copy_node_unformatted',
             callback: async (view, event) => {
                 event.preventDefault();
-                copyActiveBranchesToClipboard(view, false, false);
+                copyActiveBranchesToClipboard(view, false, false, view.isTree);
             },
             hotkeys: [
                 {

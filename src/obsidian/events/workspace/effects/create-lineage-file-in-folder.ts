@@ -11,7 +11,13 @@ export const createLineageFileInFolder = async (
     folder: TFolder,
     extension: LineageFileExtension = 'md',
 ) => {
-    const newFile = await createNewFile(plugin, folder, '', 'index', extension);
+    const newFile = await createNewFile(
+        plugin,
+        folder,
+        '',
+        undefined,
+        extension,
+    );
     if (newFile) {
         const format =
             extension === 'tree'

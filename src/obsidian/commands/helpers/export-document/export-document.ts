@@ -5,6 +5,10 @@ import { mapDocumentToText } from 'src/obsidian/commands/helpers/export-document
 import { getPersistedDocumentFormat } from 'src/obsidian/events/workspace/helpers/get-persisted-document-format';
 import { LineageView } from 'src/view/view';
 import { saveNodeContent } from 'src/view/actions/keyboard-shortcuts/helpers/commands/commands/helpers/save-node-content';
+import { clone } from 'src/helpers/clone';
+import { jsonToText } from 'src/lib/data-conversion/json-to-x/json-to-text';
+import { columnsToJson } from 'src/lib/data-conversion/x-to-json/columns-to-json';
+import { formatHeadings } from 'src/stores/document/reducers/content/format-content/format-headings';
 
 export const exportDocument = async (view: LineageView) => {
     try {
@@ -21,9 +25,18 @@ export const exportDocument = async (view: LineageView) => {
             }, 100);
             return;
         }
-        const fileData = await view.plugin.app.vault.read(file);
-        const format = getPersistedDocumentFormat(view);
-        const output = mapDocumentToText(fileData, format);
+        let output: string;
+        if (view.isTree) {
+            const state = clone(view.documentStore.getValue());
+            formatHeadings(state.document.content, state.sections);
+            output = jsonToText(
+                columnsToJson(state.document.columns, state.document.content),
+            );
+        } else {
+            const fileData = await view.plugin.app.vault.read(file);
+            const format = getPersistedDocumentFormat(view);
+            output = mapDocumentToText(fileData, format);
+        }
         const newFile = await createNewFile(
             view.plugin,
             file.parent,

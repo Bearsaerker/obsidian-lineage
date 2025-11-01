@@ -31,6 +31,7 @@ export const createSidebarContextMenuItems = (
 ) => {
     const menuItems: MenuItemObject[] = [
         {
+            disabled: view.isTree,
             title: lang.cm_copy_link_to_block,
             icon: 'links-coming-in',
             action: () => copyLinkToBlock(view, true),

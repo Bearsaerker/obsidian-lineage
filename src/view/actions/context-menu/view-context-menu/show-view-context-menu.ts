@@ -35,6 +35,7 @@ export const showViewContextMenu = (event: MouseEvent, view: LineageView) => {
         },
         { type: 'separator' },
         {
+            disabled: view.isTree,
             title: lang.cm_document_format,
             icon: 'file-cog',
             submenu: [
@@ -77,6 +78,7 @@ export const showViewContextMenu = (event: MouseEvent, view: LineageView) => {
             },
         },
         {
+            disabled: view.isTree,
             title: lang.cm_eject_document,
             icon: 'file-text',
             action: () => {
