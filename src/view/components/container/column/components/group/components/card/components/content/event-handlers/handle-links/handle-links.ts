@@ -19,6 +19,6 @@ export const handleLinks = (view: LineageView, e: MouseEvent) => {
         handleHeading(view, link, modKey);
     } else {
         e.stopPropagation();
-        handleFileLink(view, link, modKey);
+        handleFileLink(view.plugin, view.file!.path, link, modKey);
     }
 };

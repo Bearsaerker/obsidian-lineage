@@ -1,21 +1,25 @@
-import { LineageView } from 'src/view/view';
 import { openFileInExistingRightTabGroup } from 'src/view/components/container/column/components/group/components/card/components/content/event-handlers/handle-links/helpers/open-file-in-existing-right-tab-group';
 import { getLinkPaneType } from 'src/view/components/container/column/components/group/components/card/components/content/event-handlers/handle-links/block-link/handle-global-block-link';
+import Lineage from 'src/main';
 
 export const handleFileLink = (
-    view: LineageView,
+    plugin: Lineage,
+    activeFilePath: string,
     link: string,
     modKey: boolean,
 ) => {
-    const path = view.file?.path;
-    if (!link || !path) return;
-    const paneType = getLinkPaneType(view, modKey);
+    if (!link || !activeFilePath) return;
+    const paneType = getLinkPaneType(plugin, modKey);
     if (paneType === 'tab') {
-        view.plugin.app.workspace.openLinkText(link, path, 'tab');
+        plugin.app.workspace.openLinkText(link, activeFilePath, 'tab');
     } else {
-        const success = openFileInExistingRightTabGroup(view, link, path);
+        const success = openFileInExistingRightTabGroup(
+            plugin,
+            link,
+            activeFilePath,
+        );
         if (!success) {
-            view.plugin.app.workspace.openLinkText(link, path, 'split');
+            plugin.app.workspace.openLinkText(link, activeFilePath, 'split');
         }
     }
 };

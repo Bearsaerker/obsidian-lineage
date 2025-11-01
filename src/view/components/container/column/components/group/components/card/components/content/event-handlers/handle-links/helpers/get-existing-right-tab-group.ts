@@ -1,10 +1,14 @@
-import { LineageView } from 'src/view/view';
+import Lineage from 'src/main';
+import invariant from 'tiny-invariant';
 
-export const getExistingRightTabGroup = (view: LineageView) => {
-    const rootSplit = view.plugin.app.workspace.rootSplit;
+export const getExistingRightTabGroup = (plugin: Lineage) => {
+    const rootSplit = plugin.app.workspace.rootSplit;
     if (!('children' in rootSplit)) return;
 
-    const viewTabGroup = 'parent' in view.leaf ? view.leaf.parent : null;
+    const activeView = plugin.app.workspace.activeLeaf?.view;
+    invariant(activeView);
+    const viewTabGroup =
+        'parent' in activeView.leaf ? activeView.leaf.parent : null;
     if (!viewTabGroup || !(typeof viewTabGroup === 'object')) return;
     if (!('type' in viewTabGroup && viewTabGroup.type === 'tabs')) return;
     const children = rootSplit['children'];

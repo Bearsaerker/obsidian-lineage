@@ -1,44 +1,31 @@
 <script lang="ts">
-    import { getView } from '../../../../../../../context';
-    import { ActiveStatus } from 'src/view/components/container/column/components/group/components/active-status.enum';
-    import { getPersistedDocumentFormat } from 'src/obsidian/events/workspace/helpers/get-persisted-document-format';
-    import {
-        findSectionPosition
-    } from 'src/view/components/container/column/components/group/components/card/components/card-buttons/helpers/find-section-position';
-    import {
-        findOutlinePosition
-    } from 'src/view/components/container/column/components/group/components/card/components/card-buttons/helpers/find-outline-position';
-    import {
-        openFileAndJumpToLine
-    } from 'src/view/components/container/column/components/group/components/card/components/card-buttons/helpers/openFileAndJumpToLine';
-    import {
-        findHtmlElementPosition
-    } from 'src/view/components/container/column/components/group/components/card/components/card-buttons/helpers/find-html-element-position';
-    import { lang } from 'src/lang/lang';
-    import Pin from './pin-indicator.svelte';
+	import { getView } from '../../../../../../../context';
+	import { ActiveStatus } from 'src/view/components/container/column/components/group/components/active-status.enum';
+	import { lang } from 'src/lang/lang';
+	import Pin from './pin-indicator.svelte';
+	import { isMacLike } from 'src/view/actions/keyboard-shortcuts/helpers/keyboard-events/mod-key';
+	import {
+		openFileByCtime
+	} from 'src/view/components/container/column/components/group/components/card/components/card-buttons/helpers/open-file-by-ctime';
+	import {
+		revealSectionInEditor
+	} from 'src/view/components/container/column/components/group/components/card/components/card-buttons/helpers/reveal-section-in-editor';
 
-    const view = getView();
+	const view = getView();
     export let nodeId: string;
     export let activeStatus: ActiveStatus | null;
     export let section: string;
     export let pinned: boolean;
 
     // eslint-disable-next-line no-undef
-    const openFile = async () => {
+    const openFile = async (e: MouseEvent) => {
         if (!view.file) return;
-
-        const format = getPersistedDocumentFormat(view);
-        const i =
-            format === 'sections'
-                ? findSectionPosition(view, nodeId)
-                : format === 'html-element'
-                  ? findHtmlElementPosition(view, nodeId)
-                  : findOutlinePosition(view, nodeId);
-        if (typeof i === 'undefined') return;
-        const targetLine = i + (format === 'sections' ? 1 : 0);
-        const lines = view.data.split('\n');
-        const nextLine = lines[targetLine] || '';
-        await openFileAndJumpToLine(view, targetLine, nextLine.length);
+		const modKey = isMacLike ? e.metaKey : e.ctrlKey;
+		if(view.isTree){
+			openFileByCtime(view, nodeId, modKey)
+		} else {
+			revealSectionInEditor(view, nodeId, modKey)
+      	}
     };
     const classes: Partial<Record<ActiveStatus, string>> = {
         [ActiveStatus.node]: 'is-active',

@@ -1,15 +1,15 @@
-import { LineageView } from 'src/view/view';
 import { getExistingRightTabGroup } from 'src/view/components/container/column/components/group/components/card/components/content/event-handlers/handle-links/helpers/get-existing-right-tab-group';
 import { WorkspaceLeaf } from 'obsidian';
+import Lineage from 'src/main';
 
 export const openFileInExistingRightTabGroup = (
-    view: LineageView,
+    plugin: Lineage,
     link: string,
     activeFilePath: string,
 ): boolean => {
-    const rightTabGroup = getExistingRightTabGroup(view);
+    const rightTabGroup = getExistingRightTabGroup(plugin);
     if (!rightTabGroup) return false;
-    const workspace = view.plugin.app.workspace;
+    const workspace = plugin.app.workspace;
     if (
         !(
             'createLeafInTabGroup' in workspace &&
@@ -22,18 +22,17 @@ export const openFileInExistingRightTabGroup = (
     ) as WorkspaceLeaf | null;
     if (newLeaf) {
         if (link.contains('#')) {
-            view.plugin.app.workspace.openLinkText(
+            plugin.app.workspace.openLinkText(
                 link,
                 activeFilePath,
                 'split',
                 newLeaf.getViewState(),
             );
         } else {
-            const linkedFile =
-                view.plugin.app.metadataCache.getFirstLinkpathDest(
-                    link,
-                    activeFilePath,
-                );
+            const linkedFile = plugin.app.metadataCache.getFirstLinkpathDest(
+                link,
+                activeFilePath,
+            );
             if (linkedFile) {
                 newLeaf.openFile(linkedFile);
                 workspace.setActiveLeaf(newLeaf);
