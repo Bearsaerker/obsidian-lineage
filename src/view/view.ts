@@ -211,16 +211,26 @@ export class LineageView extends TextFileView {
     private loadInitialData = async () => {
         invariant(this.file);
 
+        const pluginState = this.plugin.store.getValue();
+        const fileHasAStore = pluginState.documents[this.file.path];
+        if (fileHasAStore) {
+            this.documentStore =
+                this.plugin.store.getValue().documents[
+                    this.file.path
+                ].documentStore;
+        } else {
+            this.plugin.store.dispatch({
+                type: 'plugin/documents/register-new-document-store',
+                payload: {
+                    path: this.file.path,
+                    documentStore: this.documentStore,
+                    viewId: this.id,
+                },
+            });
+        }
         if (this.isTree) {
             await this.loadTree();
         } else {
-            const pluginState = this.plugin.store.getValue();
-            const fileHasAStore = pluginState.documents[this.file.path];
-            if (fileHasAStore) {
-                this.useExistingStore();
-            } else {
-                this.createStore();
-            }
             this.loadDocumentToStore('view-mount');
         }
 
@@ -239,27 +249,6 @@ export class LineageView extends TextFileView {
 
         invariant(this.container);
         this.onDestroyCallbacks.add(viewSubscriptions(this));
-    };
-
-    private createStore = () => {
-        invariant(this.file);
-
-        this.plugin.store.dispatch({
-            type: 'plugin/documents/register-new-document-store',
-            payload: {
-                path: this.file.path,
-                documentStore: this.documentStore,
-                viewId: this.id,
-            },
-        });
-    };
-
-    private useExistingStore = () => {
-        if (!this.file) return;
-        this.documentStore =
-            this.plugin.store.getValue().documents[
-                this.file.path
-            ].documentStore;
     };
 
     private loadDocumentToStore = (event?: 'view-mount') => {
