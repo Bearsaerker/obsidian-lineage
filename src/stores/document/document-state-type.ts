@@ -31,6 +31,8 @@ export type DocumentState = {
 export type LineageDocument = {
     columns: Column[];
     content: Content;
+    // used by lineage-tree plugin
+    meta?: DocumentMetadata;
 };
 
 export type Column = {
@@ -51,6 +53,11 @@ export type Content = {
         content: string;
     };
 };
+export type DocumentMetadata = {
+    [nodeId: string]: {
+        ctime: number;
+    };
+};
 
 // document change history
 export type DocumentHistory = History<Snapshot, { activeSection: string }>;
@@ -69,6 +76,7 @@ export type Snapshot = {
     data: {
         content: string;
         columns: string;
+        meta: string;
     };
     context: SnapshotContext;
     created: number;

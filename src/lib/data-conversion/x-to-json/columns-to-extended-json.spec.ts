@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Column } from 'src/stores/document/document-state-type';
 import {
     columnsToExtendedJson,
-    ExtendedTreeNode,
+    TreeNodeWithId,
 } from 'src/lib/data-conversion/x-to-json/columns-to-extended-json';
 
 const rootNodeId = 'root';
@@ -15,7 +15,7 @@ describe('columns-to-extended-json', () => {
             id: 'c-1',
             groups: [{ nodes: [node1, node2], parentId: rootNodeId }],
         };
-        const output: ExtendedTreeNode[] = [
+        const output: TreeNodeWithId[] = [
             {
                 id: node1,
                 content: '',

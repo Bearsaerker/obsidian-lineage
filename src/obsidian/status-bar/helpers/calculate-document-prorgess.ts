@@ -1,13 +1,13 @@
 import {
     columnsToExtendedJson,
-    ExtendedTreeNode,
+    TreeNodeWithId,
 } from 'src/lib/data-conversion/x-to-json/columns-to-extended-json';
 import { LineageDocument } from 'src/stores/document/document-state-type';
 
 const flattenTree = (
-    nodes: ExtendedTreeNode[],
-    result: ExtendedTreeNode[] = [],
-): ExtendedTreeNode[] => {
+    nodes: TreeNodeWithId[],
+    result: TreeNodeWithId[] = [],
+): TreeNodeWithId[] => {
     for (const node of nodes) {
         result.push(node);
         if (node.children.length > 0) flattenTree(node.children, result);
@@ -15,7 +15,7 @@ const flattenTree = (
     return result;
 };
 
-const calculateFlatTreeContentLength = (flatTree: ExtendedTreeNode[]) => {
+const calculateFlatTreeContentLength = (flatTree: TreeNodeWithId[]) => {
     return flatTree.reduce((sum, node) => sum + node.content.length, 0);
 };
 

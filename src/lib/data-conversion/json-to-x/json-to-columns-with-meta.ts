@@ -1,35 +1,32 @@
-import { TreeNode } from 'src/lib/data-conversion/x-to-json/columns-to-json';
 import {
     Column,
     Content,
+    DocumentMetadata,
+    LineageDocument,
     NodeGroup,
     NodeId,
 } from 'src/stores/document/document-state-type';
 import { id } from 'src/helpers/id';
 import { createColumn } from 'src/lib/tree-utils/create/create-column';
 import { createGroup } from 'src/lib/tree-utils/create/create-group';
+import { TreeNodeWithMeta } from 'src/lib/data-conversion/x-to-json/columns-to-json-with-meta';
+import { findGroup } from 'src/lib/data-conversion/json-to-x/json-to-columns';
 
-const groupsCache: Record<string, NodeGroup | undefined> = {};
-export const findGroup = (column: Column, parentId: string) => {
-    if (!groupsCache[parentId]) {
-        groupsCache[parentId] = column.groups.find(
-            (g) => g.parentId === parentId,
-        );
-    }
-    return groupsCache[parentId];
-};
-
-export const jsonToColumns = (
-    tree: TreeNode[],
+export const jsonToColumnsWithMeta = (
+    tree: TreeNodeWithMeta[],
     parentId = id.rootNode(),
     columns: Column[] = [],
     content: Content = {},
+    meta: DocumentMetadata = {},
     level = 0,
 ) => {
     for (const treeNode of tree) {
         const node: NodeId = id.node();
         content[node] = {
             content: treeNode.content,
+        };
+        meta[node] = {
+            ctime: treeNode.ctime,
         };
 
         if (!columns[level]) {
@@ -44,8 +41,15 @@ export const jsonToColumns = (
         }
         group.nodes.push(node);
         if (treeNode.children.length > 0) {
-            jsonToColumns(treeNode.children, node, columns, content, level + 1);
+            jsonToColumnsWithMeta(
+                treeNode.children,
+                node,
+                columns,
+                content,
+                meta,
+                level + 1,
+            );
         }
     }
-    return { content, columns };
+    return { content, columns, meta } satisfies LineageDocument;
 };

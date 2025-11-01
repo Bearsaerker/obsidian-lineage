@@ -50,8 +50,11 @@ import { loadFullDocument } from 'src/stores/view/subscriptions/actions/document
 import { refreshActiveViewOfDocument } from 'src/stores/plugin/actions/refresh-active-view-of-document';
 import { detectDocumentFormat } from 'src/lib/format-detection/detect-document-format';
 import { LineageDocumentFormat } from 'src/stores/settings/settings-type';
-import { TreeNode } from 'src/lib/data-conversion/x-to-json/columns-to-json';
-import { jsonToColumns } from 'src/lib/data-conversion/json-to-x/json-to-columns';
+import {
+    columnsToJsonWithMeta,
+    TreeNodeWithMeta,
+} from 'src/lib/data-conversion/x-to-json/columns-to-json-with-meta';
+import { jsonToColumnsWithMeta } from 'src/lib/data-conversion/json-to-x/json-to-columns-with-meta';
 
 export const LINEAGE_VIEW_TYPE = 'lineage';
 
@@ -188,10 +191,6 @@ export class LineageView extends TextFileView {
         onPluginError(error, location, action);
     };
 
-    get isTree() {
-        return this.file?.extension === 'tree';
-    }
-
     saveDocument = async () => {
         if (this.isTree) return;
 
@@ -213,12 +212,7 @@ export class LineageView extends TextFileView {
         invariant(this.file);
 
         if (this.isTree) {
-            if (this.plugin.lineageTree) {
-                const nodes = await this.plugin.lineageTree.getData(this.file);
-                if (nodes) {
-                    this.__loadNodes__(nodes);
-                }
-            }
+            await this.loadTree();
         } else {
             const pluginState = this.plugin.store.getValue();
             const fileHasAStore = pluginState.documents[this.file.path];
@@ -297,34 +291,6 @@ export class LineageView extends TextFileView {
         }
     };
 
-    private __nodes__: TreeNode[] = [];
-    __loadNodes__ = (nodes: TreeNode[]) => {
-        if (JSON.stringify(nodes) === JSON.stringify(this.__nodes__))
-            return false;
-
-        const documentState = this.documentStore.getValue();
-        const viewState = this.viewStore.getValue();
-
-        const activeNode = viewState.document.activeNode;
-        const activeSection = activeNode
-            ? documentState.sections.id_section[activeNode]
-            : null;
-        this.documentStore.dispatch({
-            type: 'document/file/load-from-disk',
-            payload: {
-                __test_document__: jsonToColumns(nodes),
-                activeSection,
-            },
-        });
-        this.__nodes__ = nodes;
-        setTimeout(() => {
-            this.alignBranch.align({
-                type: 'view/life-cycle/mount',
-            });
-        }, 0);
-        return true;
-    };
-
     private getDocumentFormat(body: string) {
         let format: LineageDocumentFormat;
         format = getPersistedDocumentFormat(this, false);
@@ -364,4 +330,53 @@ export class LineageView extends TextFileView {
         if (!main) return;
         main.toggleClass('is-loading', isLoading);
     };
+
+    get isTree() {
+        return this.file?.extension === 'tree';
+    }
+
+    loadTree = async () => {
+        if (this.plugin.lineageTree) {
+            const nodes = await this.plugin.lineageTree.getData(this.file);
+            if (nodes) {
+                this.setNodes(nodes);
+            }
+        }
+    };
+
+    // used by lineage-tree
+    private loadedNodes: TreeNodeWithMeta[] = [];
+    setNodes = (nodes: TreeNodeWithMeta[]) => {
+        if (JSON.stringify(nodes) === JSON.stringify(this.loadedNodes))
+            return false;
+
+        const documentState = this.documentStore.getValue();
+        const viewState = this.viewStore.getValue();
+
+        const activeNode = viewState.document.activeNode;
+        const activeSection = activeNode
+            ? documentState.sections.id_section[activeNode]
+            : null;
+        this.documentStore.dispatch({
+            type: 'document/file/load-from-disk',
+            payload: {
+                __test_document__: jsonToColumnsWithMeta(nodes),
+                activeSection,
+            },
+        });
+        this.loadedNodes = nodes;
+
+        return true;
+    };
+
+    getNodes() {
+        const documentState = this.documentStore.getValue();
+        const document = documentState.document;
+        invariant(document.meta);
+        return columnsToJsonWithMeta(
+            document.columns,
+            document.content,
+            document.meta,
+        );
+    }
 }

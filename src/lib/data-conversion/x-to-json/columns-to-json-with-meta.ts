@@ -1,26 +1,37 @@
-import { Columns, Content } from 'src/stores/document/document-state-type';
-import { TreeNode } from 'src/lib/data-conversion/x-to-json/columns-to-json';
+import {
+    Columns,
+    Content,
+    DocumentMetadata,
+} from 'src/stores/document/document-state-type';
 
-const createTreeNode = (id: string, content = ''): TreeNodeWithId => {
+const createTreeNode = (content = '', ctime = -1): TreeNodeWithMeta => {
     return {
-        id,
+        ctime,
         content: content.trim(),
         children: [],
     };
 };
 
-export type TreeNodeWithId = TreeNode & {
-    id: string;
-    children: TreeNodeWithId[];
+export type TreeNodeWithMeta = {
+    content: string;
+    children: TreeNodeWithMeta[];
+    ctime: number;
 };
 
-export const columnsToExtendedJson = (columns: Columns, content: Content) => {
-    const nodeMap: { [id: string]: TreeNodeWithId } = {};
+export const columnsToJsonWithMeta = (
+    columns: Columns,
+    content: Content,
+    meta: DocumentMetadata,
+) => {
+    const nodeMap: { [id: string]: TreeNodeWithMeta } = {};
     for (const column of columns) {
         for (const group of column.groups) {
             for (const node of group.nodes) {
-                const treeNode = createTreeNode(node, content[node]?.content);
-                let parentNode: TreeNodeWithId = nodeMap[group.parentId];
+                const treeNode = createTreeNode(
+                    content[node]?.content,
+                    meta[node]?.ctime ?? -1,
+                );
+                let parentNode: TreeNodeWithMeta = nodeMap[group.parentId];
                 if (!parentNode) {
                     parentNode = createTreeNode(group.parentId);
                     nodeMap[group.parentId] = parentNode;
@@ -31,7 +42,7 @@ export const columnsToExtendedJson = (columns: Columns, content: Content) => {
         }
     }
 
-    const roots: TreeNodeWithId[] = [];
+    const roots: TreeNodeWithMeta[] = [];
     if (columns[0])
         for (const group of columns[0].groups) {
             for (const node of group.nodes) {

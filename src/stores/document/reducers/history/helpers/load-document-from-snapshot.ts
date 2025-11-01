@@ -12,4 +12,5 @@ export const loadDocumentFromSnapshot = (
     history.context.activeSection = snapshot.context.newActiveSection;
     document.content = JSON.parse(snapshot.data.content);
     document.columns = JSON.parse(snapshot.data.columns);
+    document.meta = JSON.parse(snapshot.data.meta);
 };

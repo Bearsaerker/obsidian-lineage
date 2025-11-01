@@ -10,7 +10,9 @@ export const loadDocumentFromJSON = (
 ) => {
     state.document.columns = document.columns;
     state.document.content = document.content;
-
+    if (document.meta) {
+        state.document.meta = document.meta;
+    }
     const activeNode = state.document.columns[0].groups[0].nodes[0];
     invariant(activeNode);
 

@@ -9,7 +9,7 @@ import {
     N_CHARS_OF_INDENT,
     N_CHARS_PER_LINE,
 } from 'src/stores/minimap/subscriptions/effects/minimap-canvas/worker/consts/constants';
-import { ExtendedTreeNode } from 'src/lib/data-conversion/x-to-json/columns-to-extended-json';
+import { TreeNodeWithId } from 'src/lib/data-conversion/x-to-json/columns-to-extended-json';
 import { IndentationLine } from 'src/stores/minimap/subscriptions/effects/minimap-canvas/worker/shapes/helpers/calculate-indentation-lines';
 
 const lineOffset = 1;
@@ -23,7 +23,7 @@ export type WordBlock = {
 
 type State = { nextLineOffset: number; depth: number; lines: MinimapLine[] };
 const calculateWordBlocksOfCard = (
-    node: ExtendedTreeNode,
+    node: TreeNodeWithId,
     state: State,
     canvasId: string,
 ) => {
@@ -92,7 +92,7 @@ export type MinimapLine = {
 
 export type WordBlocksResult = { totalLines: number; lines: MinimapLine[] };
 export const calculateWordBlocks = (
-    nodes: ExtendedTreeNode[],
+    nodes: TreeNodeWithId[],
     canvasId: string,
 ) => {
     const state: State = {

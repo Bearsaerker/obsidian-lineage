@@ -13,6 +13,7 @@ export const createSnapshot = (
         data: {
             columns: JSON.stringify(document.columns),
             content: JSON.stringify(document.content),
+            meta: JSON.stringify(document.meta ?? {}),
         },
         context,
         created: Date.now(),
