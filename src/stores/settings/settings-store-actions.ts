@@ -124,21 +124,8 @@ export type SettingsActions =
           type: 'view/left-sidebar/set-active-tab';
           payload: { tab: LeftSidebarTab };
       }
-    | {
-          type: 'settings/pinned-nodes/persist';
-          payload: {
-              filePath: string;
-              sections: string[];
-              section: string;
-          };
-      }
-    | {
-          type: 'settings/pinned-nodes/persist-active-node';
-          payload: {
-              filePath: string;
-              section: string;
-          };
-      }
+    | PersistPinnedSectionsAction
+    | PersistActivePinnedSectionAction
     | { type: 'view/modes/gap-between-cards/toggle' }
     | { type: 'settings/view/modes/toggle-outline-mode' }
     | {
@@ -235,5 +222,22 @@ export type ResetHotkeyAction = {
     payload: {
         command: CommandName;
         type: 'primary' | 'secondary';
+    };
+};
+
+export type PersistPinnedSectionsAction = {
+    type: 'settings/pinned-nodes/persist';
+    payload: {
+        filePath: string;
+        sections: string[];
+        section: string;
+    };
+};
+
+export type PersistActivePinnedSectionAction = {
+    type: 'settings/pinned-nodes/persist-active-node';
+    payload: {
+        filePath: string;
+        section: string;
     };
 };

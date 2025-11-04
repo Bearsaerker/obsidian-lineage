@@ -7,6 +7,9 @@ import { setHotkeyAsBlank } from 'src/stores/settings/reducers/set-hotkey-as-bla
 import { PersistedViewHotkey } from 'src/view/actions/keyboard-shortcuts/helpers/commands/default-view-hotkeys';
 import { persistCollapsedSections } from 'src/stores/settings/reducers/persist-collapsed-sections';
 import { SettingsActions } from 'src/stores/settings/settings-store-actions';
+import { createDocument } from 'src/stores/settings/helpers/create-document';
+import { persistActivePinnedSection } from 'src/stores/settings/reducers/pinned-sections/persist-active-pinned-section';
+import { persistPinnedSections } from 'src/stores/settings/reducers/pinned-sections/persist-pinned-sections';
 
 const updateState = (store: Settings, action: SettingsActions) => {
     if (action.type === 'settings/documents/delete-document-preferences') {
@@ -14,18 +17,11 @@ const updateState = (store: Settings, action: SettingsActions) => {
         delete store.styleRules.documents[action.payload.path];
     } else if (action.type === 'settings/documents/set-document-format') {
         if (!store.documents[action.payload.path]) {
-            store.documents[action.payload.path] = {
-                documentFormat: action.payload.format,
-                viewType: 'lineage',
-                activeSection: null,
-                pinnedSections: {
-                    sections: [],
-                    activeSection: null,
-                },
-                outline: {
-                    collapsedSections: [],
-                },
-            };
+            store.documents[action.payload.path] = createDocument(
+                store,
+                action.payload.path,
+                action.payload.format,
+            );
         } else {
             store.documents[action.payload.path].documentFormat =
                 action.payload.format;
@@ -78,24 +74,9 @@ const updateState = (store: Settings, action: SettingsActions) => {
     } else if (action.type === 'view/left-sidebar/toggle') {
         store.view.showLeftSidebar = !store.view.showLeftSidebar;
     } else if (action.type === 'settings/pinned-nodes/persist') {
-        const document = store.documents[action.payload.filePath];
-        if (!document.pinnedSections) {
-            document.pinnedSections = {
-                sections: [],
-                activeSection: null,
-            };
-        }
-        document.pinnedSections.sections = action.payload.sections;
-        document.pinnedSections.activeSection = action.payload.section;
+        persistPinnedSections(store, action);
     } else if (action.type === 'settings/pinned-nodes/persist-active-node') {
-        const document = store.documents[action.payload.filePath];
-        if (!document.pinnedSections) {
-            document.pinnedSections = {
-                sections: [],
-                activeSection: null,
-            };
-        }
-        document.pinnedSections.activeSection = action.payload.section;
+        persistActivePinnedSection(store, action);
     } else if (
         action.type === 'settings/view/toggle-horizontal-scrolling-mode'
     ) {

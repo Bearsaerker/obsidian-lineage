@@ -32,7 +32,9 @@ export const onWorkspaceEvent = (plugin: Lineage) => {
         plugin.store.dispatch({
             type: 'plugin/echo/workspace/layout-ready',
         });
-        removeStaleDocuments(plugin);
+        if (plugin.manifest.id !== 'lineage-dev') {
+            removeStaleDocuments(plugin);
+        }
     });
     plugin.registerEvent(onActiveLeafChangeRef);
     plugin.registerEvent(onResizeRef);

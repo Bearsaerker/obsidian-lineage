@@ -81,7 +81,7 @@ export const onDocumentStateUpdate = (
     if (!container || !view.isViewOfFile) return;
 
     if (e.content || structuralChange) {
-        view.saveDocument();
+        view.saveDocument(action);
     }
 
     if (e.content || structuralChange) {

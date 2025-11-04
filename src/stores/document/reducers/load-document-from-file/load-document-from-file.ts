@@ -1,21 +1,19 @@
 import { jsonToColumns } from 'src/lib/data-conversion/json-to-x/json-to-columns';
 import { htmlCommentToJson } from 'src/lib/data-conversion/x-to-json/html-comment-to-json';
-import {
-    DocumentState,
-    LineageDocument,
-} from 'src/stores/document/document-state-type';
+import { DocumentState } from 'src/stores/document/document-state-type';
 import { SavedDocument } from 'src/stores/document/document-store-actions';
 import { insertFirstNode } from 'src/lib/tree-utils/insert/insert-first-node';
 import invariant from 'tiny-invariant';
 import { LineageDocumentFormat } from 'src/stores/settings/settings-type';
 import { outlineToJson } from 'src/lib/data-conversion/x-to-json/outline-to-json';
 import { htmlElementToJson } from 'src/lib/data-conversion/x-to-json/html-element-to-json';
+import { TreeNodeWithMeta } from 'src/lib/data-conversion/x-to-json/columns-to-json-with-meta';
 
 export type LoadJSONDocumentAction = {
     type: 'document/file/load-from-disk';
     payload: {
         activeSection: string | null;
-        __test_document__?: LineageDocument;
+        nodes?: TreeNodeWithMeta[];
     };
 };
 

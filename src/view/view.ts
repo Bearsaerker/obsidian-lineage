@@ -54,7 +54,6 @@ import {
     columnsToJsonWithMeta,
     TreeNodeWithMeta,
 } from 'src/lib/data-conversion/x-to-json/columns-to-json-with-meta';
-import { jsonToColumnsWithMeta } from 'src/lib/data-conversion/json-to-x/json-to-columns-with-meta';
 
 export const LINEAGE_VIEW_TYPE = 'lineage';
 
@@ -191,8 +190,11 @@ export class LineageView extends TextFileView {
         onPluginError(error, location, action);
     };
 
-    saveDocument = async () => {
-        if (this.isTree) return;
+    saveDocument = async (action?: DocumentStoreAction) => {
+        if (this.isTree) {
+            this.sendNodes(action);
+            return;
+        }
 
         invariant(this.file);
         const state = clone(this.documentStore.getValue());
@@ -227,11 +229,11 @@ export class LineageView extends TextFileView {
                     viewId: this.id,
                 },
             });
-        }
-        if (this.isTree) {
-            await this.loadTree();
-        } else {
-            this.loadDocumentToStore('view-mount');
+            if (this.isTree) {
+                await this.loadNodes();
+            } else {
+                this.loadDocumentToStore('view-mount');
+            }
         }
 
         if (!this.inlineEditor) {
@@ -324,9 +326,9 @@ export class LineageView extends TextFileView {
         return this.file?.extension === 'tree';
     }
 
-    loadTree = async () => {
+    loadNodes = async () => {
         if (this.plugin.lineageTree) {
-            const nodes = await this.plugin.lineageTree.getData(this.file);
+            const nodes = await this.plugin.lineageTree.getNodes(this.file);
             if (nodes) {
                 this.setNodes(nodes);
             }
@@ -334,11 +336,9 @@ export class LineageView extends TextFileView {
     };
 
     // used by lineage-tree
-    private loadedNodes: TreeNodeWithMeta[] = [];
     setNodes = (nodes: TreeNodeWithMeta[]) => {
-        if (JSON.stringify(nodes) === JSON.stringify(this.loadedNodes))
-            return false;
-
+        this.setIsLoading(true);
+        sleep(1500).then(() => this.setIsLoading(false));
         const documentState = this.documentStore.getValue();
         const viewState = this.viewStore.getValue();
 
@@ -349,23 +349,27 @@ export class LineageView extends TextFileView {
         this.documentStore.dispatch({
             type: 'document/file/load-from-disk',
             payload: {
-                __test_document__: jsonToColumnsWithMeta(nodes),
+                nodes,
                 activeSection,
             },
         });
-        this.loadedNodes = nodes;
-
-        return true;
     };
 
-    getNodes() {
+    sendNodes(action: DocumentStoreAction | undefined) {
+        const isLineageTreeAction =
+            action &&
+            action.type === 'document/file/load-from-disk' &&
+            'nodes' in action.payload;
+        if (isLineageTreeAction) return;
+
         const documentState = this.documentStore.getValue();
         const document = documentState.document;
         invariant(document.meta);
-        return columnsToJsonWithMeta(
+        const nodes = columnsToJsonWithMeta(
             document.columns,
             document.content,
             document.meta,
         );
+        this.plugin.lineageTree.setNodes(this.file, nodes);
     }
 }

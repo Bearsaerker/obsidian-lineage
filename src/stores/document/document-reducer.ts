@@ -99,10 +99,10 @@ const updateDocumentState = (
         newActiveNodeId = action.payload.id;
         affectedNodeId = newActiveNodeId;
     } else if (action.type === 'document/file/load-from-disk') {
-        if ('__test_document__' in action.payload) {
+        if ('nodes' in action.payload) {
             newActiveNodeId = loadDocumentFromJSON(
                 state,
-                action.payload.__test_document__!,
+                action.payload.nodes!,
             );
         } else {
             newActiveNodeId = loadDocumentFromFile(
