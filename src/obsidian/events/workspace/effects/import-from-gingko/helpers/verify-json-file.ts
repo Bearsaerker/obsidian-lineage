@@ -1,4 +1,4 @@
-import { TreeNode } from 'src/lib/data-conversion/x-to-json/columns-to-json';
+import { TreeNode } from 'src/lib/formats/x-to-json/columns-to-json';
 
 export const verifyJsonFile = (tree: (unknown | TreeNode)[]) => {
     for (const treeNode of tree) {

@@ -1,4 +1,4 @@
-import { TreeNode } from 'src/lib/data-conversion/x-to-json/columns-to-json';
+import { TreeNode } from 'src/lib/formats/x-to-json/columns-to-json';
 import { Notice, TFile } from 'obsidian';
 import Lineage from 'src/main';
 import { onPluginError } from 'src/lib/store/on-plugin-error';

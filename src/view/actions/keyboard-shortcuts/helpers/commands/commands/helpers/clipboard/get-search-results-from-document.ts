@@ -5,7 +5,7 @@ import {
 } from 'src/stores/document/document-state-type';
 import { clone } from 'src/helpers/clone';
 import { getBranch } from 'src/view/actions/keyboard-shortcuts/helpers/commands/commands/helpers/get-branch';
-import { branchToOutline } from 'src/lib/data-conversion/branch-to-x/branch-to-outline';
+import { branchToOutline } from 'src/lib/formats/branch-to-x/branch-to-outline';
 import { sortNodeIdsBySectionNumber } from 'src/lib/tree-utils/sort/sort-node-ids-by-section-number';
 import { sortNodeIdsByDepthDesc } from 'src/lib/tree-utils/sort/sort-node-ids-by-depth-desc';
 

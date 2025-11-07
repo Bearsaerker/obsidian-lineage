@@ -1,8 +1,8 @@
 import { LineageView } from 'src/view/view';
 import { clone } from 'src/helpers/clone';
 import { nanoid } from 'nanoid';
-import { jsonToOutline } from 'src/lib/data-conversion/json-to-x/json-to-outline';
-import { columnsToJson } from 'src/lib/data-conversion/x-to-json/columns-to-json';
+import { jsonToOutline } from 'src/lib/formats/json-to-x/json-to-outline';
+import { columnsToJson } from 'src/lib/formats/x-to-json/columns-to-json';
 import { extractFrontmatter } from 'src/view/helpers/extract-frontmatter';
 
 export const findOutlinePosition = (view: LineageView, nodeId: string) => {

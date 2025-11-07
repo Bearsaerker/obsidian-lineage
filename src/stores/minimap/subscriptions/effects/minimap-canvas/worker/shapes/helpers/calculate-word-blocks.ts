@@ -9,7 +9,7 @@ import {
     N_CHARS_OF_INDENT,
     N_CHARS_PER_LINE,
 } from 'src/stores/minimap/subscriptions/effects/minimap-canvas/worker/consts/constants';
-import { TreeNodeWithId } from 'src/lib/data-conversion/x-to-json/columns-to-extended-json';
+import { TreeNodeWithId } from 'src/lib/formats/x-to-json/columns-to-extended-json';
 import { IndentationLine } from 'src/stores/minimap/subscriptions/effects/minimap-canvas/worker/shapes/helpers/calculate-indentation-lines';
 
 const lineOffset = 1;

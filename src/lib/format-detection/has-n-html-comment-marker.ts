@@ -1,4 +1,4 @@
-import { parseHtmlCommentMarker } from 'src/lib/data-conversion/helpers/html-comment-marker/parse-html-comment-marker';
+import { parseHtmlCommentMarker } from 'src/lib/formats/helpers/html-comment-marker/parse-html-comment-marker';
 
 export const hasNHtmlCommentMarker = (input: string, n = 2): boolean => {
     const lines = input.split('\n');

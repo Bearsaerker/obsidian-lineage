@@ -6,8 +6,8 @@ import { getPersistedDocumentFormat } from 'src/obsidian/events/workspace/helper
 import { LineageView } from 'src/view/view';
 import { saveNodeContent } from 'src/view/actions/keyboard-shortcuts/helpers/commands/commands/helpers/save-node-content';
 import { clone } from 'src/helpers/clone';
-import { jsonToText } from 'src/lib/data-conversion/json-to-x/json-to-text';
-import { columnsToJson } from 'src/lib/data-conversion/x-to-json/columns-to-json';
+import { jsonToText } from 'src/lib/formats/json-to-x/json-to-text';
+import { columnsToJson } from 'src/lib/formats/x-to-json/columns-to-json';
 import { formatHeadings } from 'src/stores/document/reducers/content/format-content/format-headings';
 
 export const exportDocument = async (view: LineageView) => {

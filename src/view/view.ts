@@ -53,7 +53,7 @@ import { LineageDocumentFormat } from 'src/stores/settings/settings-type';
 import {
     columnsToJsonWithMeta,
     TreeNodeWithMeta,
-} from 'src/lib/data-conversion/x-to-json/columns-to-json-with-meta';
+} from 'src/lib/formats/x-to-json/columns-to-json-with-meta';
 
 export const LINEAGE_VIEW_TYPE = 'lineage';
 
@@ -364,7 +364,7 @@ export class LineageView extends TextFileView {
 
         const documentState = this.documentStore.getValue();
         const document = documentState.document;
-        invariant(document.meta);
+        if (!document.meta) return;
         const nodes = columnsToJsonWithMeta(
             document.columns,
             document.content,

@@ -1,7 +1,7 @@
 import {
     columnsToExtendedJson,
     TreeNodeWithId,
-} from 'src/lib/data-conversion/x-to-json/columns-to-extended-json';
+} from 'src/lib/formats/x-to-json/columns-to-extended-json';
 import { LineageDocument } from 'src/stores/document/document-state-type';
 
 const flattenTree = (

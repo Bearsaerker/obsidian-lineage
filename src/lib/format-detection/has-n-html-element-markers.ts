@@ -1,4 +1,4 @@
-import { parseHtmlElementMarker } from 'src/lib/data-conversion/helpers/html-element-marker/parse-html-element-marker';
+import { parseHtmlElementMarker } from 'src/lib/formats/helpers/html-element-marker/parse-html-element-marker';
 
 export const hasNHtmlElementMarker = (input: string, n = 2): boolean => {
     const lines = input.split('\n');

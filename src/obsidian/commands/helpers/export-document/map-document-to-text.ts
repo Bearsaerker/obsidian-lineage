@@ -1,9 +1,9 @@
 import { extractFrontmatter } from 'src/view/helpers/extract-frontmatter';
-import { htmlCommentToJson } from 'src/lib/data-conversion/x-to-json/html-comment-to-json';
-import { jsonToText } from 'src/lib/data-conversion/json-to-x/json-to-text';
+import { htmlCommentToJson } from 'src/lib/formats/x-to-json/html-comment-to-json';
+import { jsonToText } from 'src/lib/formats/json-to-x/json-to-text';
 import { LineageDocumentFormat } from 'src/stores/settings/settings-type';
-import { outlineToJson } from 'src/lib/data-conversion/x-to-json/outline-to-json';
-import { htmlElementToJson } from 'src/lib/data-conversion/x-to-json/html-element-to-json';
+import { outlineToJson } from 'src/lib/formats/x-to-json/outline-to-json';
+import { htmlElementToJson } from 'src/lib/formats/x-to-json/html-element-to-json';
 
 export const mapDocumentToText = (
     fileData: string,

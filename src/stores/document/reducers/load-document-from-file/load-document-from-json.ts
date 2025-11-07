@@ -1,5 +1,5 @@
-import { jsonToColumnsWithMeta } from 'src/lib/data-conversion/json-to-x/json-to-columns-with-meta';
-import { TreeNodeWithMeta } from 'src/lib/data-conversion/x-to-json/columns-to-json-with-meta';
+import { jsonToColumnsWithMeta } from 'src/lib/formats/json-to-x/json-to-columns-with-meta';
+import { TreeNodeWithMeta } from 'src/lib/formats/x-to-json/columns-to-json-with-meta';
 import { insertFirstNode } from 'src/lib/tree-utils/insert/insert-first-node';
 import { DocumentState } from 'src/stores/document/document-state-type';
 import invariant from 'tiny-invariant';

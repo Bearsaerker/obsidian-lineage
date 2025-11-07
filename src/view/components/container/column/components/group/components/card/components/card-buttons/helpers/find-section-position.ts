@@ -1,4 +1,4 @@
-import { parseHtmlCommentMarker } from 'src/lib/data-conversion/helpers/html-comment-marker/parse-html-comment-marker';
+import { parseHtmlCommentMarker } from 'src/lib/formats/helpers/html-comment-marker/parse-html-comment-marker';
 import { LineageView } from 'src/view/view';
 import { get } from 'svelte/store';
 

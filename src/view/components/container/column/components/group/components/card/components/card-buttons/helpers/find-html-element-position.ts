@@ -1,4 +1,4 @@
-import { parseHtmlElementMarker } from 'src/lib/data-conversion/helpers/html-element-marker/parse-html-element-marker';
+import { parseHtmlElementMarker } from 'src/lib/formats/helpers/html-element-marker/parse-html-element-marker';
 import { LineageView } from 'src/view/view';
 import { get } from 'svelte/store';
 

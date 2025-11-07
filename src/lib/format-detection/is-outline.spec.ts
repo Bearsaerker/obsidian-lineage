@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { isOutline } from 'src/lib/format-detection/is-outline';
-import { outlineExamples } from 'src/lib/data-conversion/test-data/outline-examples';
+import { outlineExamples } from 'src/lib/formats/test-data/outline-examples';
 
 describe('isOutline', () => {
     test('should return false for an empty string', () => {

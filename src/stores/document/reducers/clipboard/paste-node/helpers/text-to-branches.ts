@@ -1,11 +1,11 @@
-import { htmlCommentToJson } from 'src/lib/data-conversion/x-to-json/html-comment-to-json';
-import { jsonToColumns } from 'src/lib/data-conversion/json-to-x/json-to-columns';
+import { htmlCommentToJson } from 'src/lib/formats/x-to-json/html-comment-to-json';
+import { jsonToColumns } from 'src/lib/formats/json-to-x/json-to-columns';
 import { ClipboardBranch } from 'src/stores/document/document-state-type';
 import { getBranch } from 'src/view/actions/keyboard-shortcuts/helpers/commands/commands/helpers/get-branch';
 import { detectDocumentFormat } from 'src/lib/format-detection/detect-document-format';
-import { outlineToJson } from 'src/lib/data-conversion/x-to-json/outline-to-json';
-import { htmlElementToJson } from 'src/lib/data-conversion/x-to-json/html-element-to-json';
-import { TreeNode } from 'src/lib/data-conversion/x-to-json/columns-to-json';
+import { outlineToJson } from 'src/lib/formats/x-to-json/outline-to-json';
+import { htmlElementToJson } from 'src/lib/formats/x-to-json/html-element-to-json';
+import { TreeNode } from 'src/lib/formats/x-to-json/columns-to-json';
 
 export const textToBranches = (text: string) => {
     const detectedFormat = detectDocumentFormat(text, false);

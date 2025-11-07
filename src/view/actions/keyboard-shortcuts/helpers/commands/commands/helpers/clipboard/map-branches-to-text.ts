@@ -1,13 +1,13 @@
 import { getBranch } from 'src/view/actions/keyboard-shortcuts/helpers/commands/commands/helpers/get-branch';
-import { branchToHtmlComment } from 'src/lib/data-conversion/branch-to-x/branch-to-html-comment';
-import { branchToOutline } from 'src/lib/data-conversion/branch-to-x/branch-to-outline';
+import { branchToHtmlComment } from 'src/lib/formats/branch-to-x/branch-to-html-comment';
+import { branchToOutline } from 'src/lib/formats/branch-to-x/branch-to-outline';
 import { LineageDocumentFormat } from 'src/stores/settings/settings-type';
 import {
     LineageDocument,
     Sections,
 } from 'src/stores/document/document-state-type';
-import { branchToHtmlElement } from 'src/lib/data-conversion/branch-to-x/branch-to-html-element';
-import { branchToText } from 'src/lib/data-conversion/branch-to-x/branch-to-text';
+import { branchToHtmlElement } from 'src/lib/formats/branch-to-x/branch-to-html-element';
+import { branchToText } from 'src/lib/formats/branch-to-x/branch-to-text';
 import { clone } from 'src/helpers/clone';
 import { formatHeadings } from 'src/stores/document/reducers/content/format-content/format-headings';
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { wikipedia_cobol } from 'src/lib/data-conversion/test-data/wikipedia_cobol';
+import { wikipedia_cobol } from 'src/lib/formats/test-data/wikipedia_cobol';
 import { getAllChildren } from 'src/lib/tree-utils/get/get-all-children';
 
 describe('getAllChildren', () => {

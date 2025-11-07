@@ -1,14 +1,14 @@
 import { LineageView } from 'src/view/view';
 import { getBranch } from 'src/view/actions/keyboard-shortcuts/helpers/commands/commands/helpers/get-branch';
-import { branchToHtmlComment } from 'src/lib/data-conversion/branch-to-x/branch-to-html-comment';
+import { branchToHtmlComment } from 'src/lib/formats/branch-to-x/branch-to-html-comment';
 import { createNewFile } from 'src/obsidian/events/workspace/effects/create-new-file';
 import invariant from 'tiny-invariant';
 import { openFileInLineage } from 'src/obsidian/events/workspace/effects/open-file-in-lineage';
 import { getFileNameOfExtractedBranch } from 'src/obsidian/commands/helpers/extract-branch/helpers/get-file-name-of-extracted-branch/get-file-name-of-extracted-branch';
 import { onPluginError } from 'src/lib/store/on-plugin-error';
 import { getPersistedDocumentFormat } from 'src/obsidian/events/workspace/helpers/get-persisted-document-format';
-import { branchToOutline } from 'src/lib/data-conversion/branch-to-x/branch-to-outline';
-import { branchToHtmlElement } from 'src/lib/data-conversion/branch-to-x/branch-to-html-element';
+import { branchToOutline } from 'src/lib/formats/branch-to-x/branch-to-outline';
+import { branchToHtmlElement } from 'src/lib/formats/branch-to-x/branch-to-html-element';
 import { saveNodeContent } from 'src/view/actions/keyboard-shortcuts/helpers/commands/commands/helpers/save-node-content';
 import { getLinkPaneType } from 'src/view/components/container/column/components/group/components/card/components/content/event-handlers/handle-links/block-link/handle-global-block-link';
 

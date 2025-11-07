@@ -2,7 +2,7 @@ import Lineage from 'src/main';
 import invariant from 'tiny-invariant';
 import { TFolder } from 'obsidian';
 import { createNewFolder } from 'src/obsidian/events/workspace/effects/create-new-folder';
-import { jsonToHtmlComment } from 'src/lib/data-conversion/json-to-x/json-to-html-comment';
+import { jsonToHtmlComment } from 'src/lib/formats/json-to-x/json-to-html-comment';
 import { createNewFile } from 'src/obsidian/events/workspace/effects/create-new-file';
 import { setDocumentFormat } from 'src/stores/settings/actions/set-document-format';
 import { setViewType } from 'src/stores/settings/actions/set-view-type';
