@@ -35,6 +35,11 @@ import {
 import { onVaultEvent } from 'src/stores/plugin/subscriptions/on-vault-event';
 import { onWorkspaceEvent } from 'src/stores/plugin/subscriptions/on-workspace-event';
 import { SettingsActions } from 'src/stores/settings/settings-store-actions';
+import {
+    ExternalHighlight,
+    registerHighlights,
+    clearHighlights,
+} from 'src/lib/highlight-registry';
 
 export type SettingsStore = Store<Settings, SettingsActions>;
 export type PluginStore = Store<PluginState, PluginStoreActions>;
@@ -45,6 +50,27 @@ export default class Lineage extends Plugin {
     statusBar: StatusBar;
     private timeoutReferences: Set<ReturnType<typeof setTimeout>> = new Set();
     viewType: DocumentsPreferences = {};
+
+    /**
+     * Register highlights for a Lineage node.
+     * Used by external plugins (e.g., SideNote) to highlight text in cards.
+     *
+     * @param nodeId - The Lineage node ID
+     * @param highlights - Array of highlights to register
+     */
+    registerNodeHighlights(nodeId: string, highlights: ExternalHighlight[]): void {
+        registerHighlights(nodeId, highlights);
+    }
+
+    /**
+     * Clear all highlights for a Lineage node.
+     * Used by external plugins to remove highlights.
+     *
+     * @param nodeId - The Lineage node ID
+     */
+    clearNodeHighlights(nodeId: string): void {
+        clearHighlights(nodeId);
+    }
 
     async onload() {
         await this.loadSettings();

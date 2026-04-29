@@ -4,6 +4,9 @@ import { contentStore } from 'src/stores/document/derived/content-store';
 import { formatText } from 'src/view/actions/markdown-preview/helpers/format-text';
 import { highlightSearch } from 'src/view/actions/markdown-preview/helpers/highlight-search';
 import { derived } from 'src/lib/store/derived';
+import { getClickCallback, subscribeToHighlightChanges } from 'src/lib/highlight-registry';
+
+const HIGHLIGHT_DEBOUNCE_MS = 150;
 
 export const markdownPreviewAction = (
     element: HTMLElement,
@@ -16,7 +19,7 @@ export const markdownPreviewAction = (
         if (view && element) {
             element.empty();
             if (content.length > 0) {
-                content = highlightSearch(content, searchQuery);
+                content = highlightSearch(content, searchQuery, params.nodeId);
                 content = formatText(content);
             }
             MarkdownRenderer.render(
@@ -26,6 +29,9 @@ export const markdownPreviewAction = (
                 view.file!.path,
                 view,
             );
+
+            // Set up click handlers for external highlights
+            setupHighlightClickHandlers(element);
         }
     };
 
@@ -37,6 +43,7 @@ export const markdownPreviewAction = (
     const $content = contentStore(view, params.nodeId);
     let currentContent = '';
     let currentSearchQuery = '';
+    let highlightTimeout: ReturnType<typeof setTimeout> | null = null;
 
     const unsubContent = $content.subscribe((content) => {
         currentContent = content;
@@ -45,13 +52,52 @@ export const markdownPreviewAction = (
 
     const unsubSearch = searchQueryStore.subscribe((query) => {
         currentSearchQuery = query;
-        render(currentContent, currentSearchQuery);
+
+        // Debounce highlight updates during typing
+        if (highlightTimeout) {
+            clearTimeout(highlightTimeout);
+        }
+        highlightTimeout = setTimeout(() => {
+            render(currentContent, currentSearchQuery);
+            highlightTimeout = null;
+        }, HIGHLIGHT_DEBOUNCE_MS);
+    });
+
+    // Subscribe to external highlight changes (e.g., from SideNote)
+    const unsubHighlights = subscribeToHighlightChanges((changedNodeId) => {
+        if (changedNodeId === params.nodeId) {
+            render(currentContent, currentSearchQuery);
+        }
     });
 
     return {
         destroy: () => {
             unsubContent();
             unsubSearch();
+            unsubHighlights();
+            if (highlightTimeout) {
+                clearTimeout(highlightTimeout);
+            }
         },
     };
 };
+
+/**
+ * Sets up click handlers for external highlights in the rendered content.
+ */
+function setupHighlightClickHandlers(container: HTMLElement): void {
+    const highlights = container.querySelectorAll('[data-highlight-id]');
+    highlights.forEach((el) => {
+        const highlightId = el.getAttribute('data-highlight-id');
+        if (highlightId) {
+            const callback = getClickCallback(highlightId);
+            if (callback) {
+                el.addEventListener('click', (e: MouseEvent) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    callback();
+                });
+            }
+        }
+    });
+}

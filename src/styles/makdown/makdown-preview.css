@@ -48,4 +48,13 @@
         padding: 0 2px;
         margin: 0 -2px;
     }
+
+    & span.sidenote-highlight {
+        background-color: var(--sidenote-highlight, #ffc80033);
+        color: inherit;
+        border-radius: 2px;
+        padding: 0 2px;
+        margin: 0 -2px;
+        cursor: pointer;
+    }
 }
