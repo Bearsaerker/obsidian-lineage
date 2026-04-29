@@ -139,6 +139,36 @@ export const handleGlobalBlockLink = async (
     const card = blockElement.closest('.lineage-card') as HTMLElement;
     if (card && card.id) {
         await selectCard(targetView, card.id);
+        // Ensure the target leaf is active so scrolling affects the visible viewport
+        view.plugin.app.workspace.setActiveLeaf(
+            targetView.leaf,
+            { focus: true },
+        );
+        // Wait for the container and card to be fully rendered with stable layout,
+        // then scroll the card into view (reliable for both small and large files)
+        await delay(16);
+        const waitForReady = async () => {
+            const startTime = Date.now();
+            while (Date.now() - startTime < 5000) {
+                const container = targetView.container;
+                if (!container) {
+                    await delay(50);
+                    continue;
+                }
+                const cardEl = container.querySelector(`#${card.id}`);
+                if (!cardEl) {
+                    await delay(50);
+                    continue;
+                }
+                const rect = cardEl.getBoundingClientRect();
+                if (rect.width > 0 && rect.height > 0) {
+                    cardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    return;
+                }
+                await delay(50);
+            }
+        };
+        await waitForReady();
     } else {
         // Card not found — fall back to default behavior
         view.plugin.app.workspace.openLinkText(
