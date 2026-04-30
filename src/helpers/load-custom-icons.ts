@@ -90,6 +90,20 @@ const cursor: CustomIcon = {
   <path d="M 12.00361,6.8555957 V 16.855596" />`,
     mode: 'stroke',
 };
+
+const mindmap: CustomIcon = {
+    name: 'mindmap',
+    svg: `<circle cx="12" cy="12" r="3" />
+  <circle cx="4" cy="6" r="2" />
+  <circle cx="20" cy="6" r="2" />
+  <circle cx="4" cy="18" r="2" />
+  <circle cx="20" cy="18" r="2" />
+  <line x1="9.5" y1="10.5" x2="5.5" y2="7.5" />
+  <line x1="14.5" y1="10.5" x2="18.5" y2="7.5" />
+  <line x1="9.5" y1="13.5" x2="5.5" y2="16.5" />
+  <line x1="14.5" y1="13.5" x2="18.5" y2="16.5" />`,
+    mode: 'stroke',
+};
 export const customIcons = {
     cards,
     split,
@@ -99,6 +113,7 @@ export const customIcons = {
     outline,
     cursor,
     cursorOff,
+    mindmap,
 };
 
 export const loadCustomIcons = () => {

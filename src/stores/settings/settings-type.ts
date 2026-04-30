@@ -64,6 +64,7 @@ export type Settings = {
         leftSidebarActiveTab: LeftSidebarTab;
         applyGapBetweenCards: boolean;
         outlineMode: boolean;
+        mindmapMode: boolean;
         nodeIndentationWidth: number;
         maintainEditMode: boolean;
         alwaysShowCardButtons: boolean;

@@ -15,11 +15,21 @@ export const markdownPreviewAction = (
     const plugin = getPlugin();
     const view = getView();
 
+    // Mark this container so other plugins (SideNote) can skip it in
+    // markdown post-processors and avoid slowing down Lineage re-renders.
+    element.setAttribute('data-lineage-card', params.nodeId);
+
     const render = (content: string, searchQuery: string) => {
+        // Read search match status directly from the view store (reactive).
+        // Only apply highlights to cards Fuse.js already matched —
+        // non-matching cards skip substring matching entirely.
+        const isMatch = view.viewStore.getValue().search.results.has(params.nodeId);
         if (view && element) {
             element.empty();
             if (content.length > 0) {
-                content = highlightSearch(content, searchQuery, params.nodeId);
+                if (isMatch) {
+                    content = highlightSearch(content, searchQuery, params.nodeId);
+                }
                 content = formatText(content);
             }
             MarkdownRenderer.render(

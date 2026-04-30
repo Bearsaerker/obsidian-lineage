@@ -129,6 +129,15 @@ const updateState = (store: Settings, action: SettingsActions) => {
                 ...store.view.scrolling,
             };
         }
+    } else if (action.type === 'settings/view/modes/toggle-mindmap-mode') {
+        store.view.mindmapMode = !store.view.mindmapMode;
+        if (store.view.mindmapMode) {
+            store.view.outlineMode = false;
+            store.view.scrolling.centerActiveNodeH = false;
+            store.view.scrolling = {
+                ...store.view.scrolling,
+            };
+        }
     } else if (action.type === 'settings/view/set-node-indentation-width') {
         store.view.nodeIndentationWidth = action.payload.width;
     } else if (action.type === 'settings/view/set-maintain-edit-mode') {

@@ -20,6 +20,9 @@ export const ApplyGapBetweenCardsStore = (view: LineageView) =>
 export const OutlineModeStore = (view: LineageView) =>
     derived(view.plugin.settings, (state) => state.view.outlineMode);
 
+export const MindmapModeStore = (view: LineageView) =>
+    derived(view.plugin.settings, (state) => state.view.mindmapMode);
+
 export const MaintainEditMode = (view: LineageView) =>
     derived(view.plugin.settings, (state) => state.view.maintainEditMode);
 

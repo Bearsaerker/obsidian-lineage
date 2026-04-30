@@ -250,6 +250,10 @@ export const lang = {
     settings_layout_indentation_width: 'Card indentation',
     controls_single_column: 'Outline mode',
     hk_toggle_outline_mode: `Toggle outline mode`,
+
+    // mindmap
+    controls_mindmap_mode: 'Mindmap mode',
+    hk_toggle_mindmap_mode: `Toggle mindmap mode`,
     card_btn_collapse_node: 'Collapse',
     card_btn_expand_node: 'Expand',
     hk_outline_toggle_collapse: 'Collapse/expand section',
