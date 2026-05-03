@@ -130,6 +130,9 @@ export type SettingsActions =
               filePath: string;
               sections: string[];
               section: string;
+              fileCategories: string[];
+              nodeToCategory: Record<string, string>;
+              activeCategory: string;
           };
       }
     | {
@@ -184,6 +187,18 @@ export type SettingsActions =
           type: 'settings/general/set-link-pane-type';
           payload: {
               position: LinkPaneType;
+          };
+      }
+    | {
+          type: 'settings/categories/add-global-category';
+          payload: {
+              name: string;
+          };
+      }
+    | {
+          type: 'settings/categories/delete-global-category';
+          payload: {
+              name: string;
           };
       };
 export type PersistCollapsedSectionsAction = {

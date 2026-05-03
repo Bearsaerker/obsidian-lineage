@@ -52,6 +52,7 @@ export const defaultViewState = (): ViewState => ({
     },
     pinnedNodes: {
         activeNode: '',
+        activeCategory: 'all',
     },
     recentNodes: {
         activeNode: '',

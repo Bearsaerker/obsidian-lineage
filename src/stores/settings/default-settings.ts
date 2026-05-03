@@ -10,6 +10,9 @@ export const DEFAULT_SETTINGS = (): Settings => ({
     hotkeys: {
         customHotkeys: {},
     },
+    categories: {
+        globalCategories: [],
+    },
     view: {
         fontSize: 16,
         h1FontSize_em: DEFAULT_H1_FONT_SIZE_EM,

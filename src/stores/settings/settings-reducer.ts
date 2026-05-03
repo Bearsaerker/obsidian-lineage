@@ -21,6 +21,9 @@ const updateState = (store: Settings, action: SettingsActions) => {
                 pinnedSections: {
                     sections: [],
                     activeSection: null,
+                    fileCategories: [],
+                    nodeToCategory: {},
+                    activeCategory: 'all',
                 },
                 outline: {
                     collapsedSections: [],
@@ -83,16 +86,25 @@ const updateState = (store: Settings, action: SettingsActions) => {
             document.pinnedSections = {
                 sections: [],
                 activeSection: null,
+                fileCategories: [],
+                nodeToCategory: {},
+                activeCategory: 'all',
             };
         }
         document.pinnedSections.sections = action.payload.sections;
         document.pinnedSections.activeSection = action.payload.section;
+        document.pinnedSections.fileCategories = action.payload.fileCategories;
+        document.pinnedSections.nodeToCategory = action.payload.nodeToCategory;
+        document.pinnedSections.activeCategory = action.payload.activeCategory;
     } else if (action.type === 'settings/pinned-nodes/persist-active-node') {
         const document = store.documents[action.payload.filePath];
         if (!document.pinnedSections) {
             document.pinnedSections = {
                 sections: [],
                 activeSection: null,
+                fileCategories: [],
+                nodeToCategory: {},
+                activeCategory: 'all',
             };
         }
         document.pinnedSections.activeSection = action.payload.section;
@@ -227,6 +239,14 @@ const updateState = (store: Settings, action: SettingsActions) => {
         store.styleRules.settings.activeTab = action.payload.tab;
     } else if (action.type === 'settings/general/set-link-pane-type') {
         store.general.linkPaneType = action.payload.position;
+    } else if (action.type === 'settings/categories/add-global-category') {
+        if (!store.categories.globalCategories.includes(action.payload.name)) {
+            store.categories.globalCategories.push(action.payload.name);
+        }
+    } else if (action.type === 'settings/categories/delete-global-category') {
+        store.categories.globalCategories = store.categories.globalCategories.filter(
+            (c) => c !== action.payload.name,
+        );
     } else if (action.type.startsWith('settings/style-rules')) {
         updateStyleRules(store, action);
     }

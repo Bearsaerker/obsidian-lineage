@@ -111,7 +111,11 @@ export const onDocumentStateUpdate = (
     const pinnedNodesUpdate =
         type === 'document/pinned-nodes/remove-stale-nodes' ||
         type === 'document/pinned-nodes/pin' ||
-        type === 'document/pinned-nodes/unpin';
+        type === 'document/pinned-nodes/unpin' ||
+        type === 'document/pinned-nodes/set-category' ||
+        type === 'document/pinned-nodes/remove-category' ||
+        type === 'document/pinned-nodes/add-category' ||
+        type === 'document/pinned-nodes/delete-category';
 
     if (pinnedNodesUpdate) {
         persistPinnedNodes(view);

@@ -287,6 +287,16 @@ export const lang = {
     sidebar_tab_pinned_nodes: 'Pinned sections',
     sidebar_no_pinned_nodes: 'No pinned sections',
 
+    // categories
+    sidebar_filter_all: 'All',
+    sidebar_filter_uncategorized: 'Uncategorized',
+    cm_category: 'Category',
+    cm_create_category: 'Create new category...',
+    cm_remove_category: 'Remove category',
+    modal_new_category_placeholder: 'Enter category name...',
+    modal_button_cancel: 'Cancel',
+    modal_button_create: 'Create',
+
     // rules
     modals_rules_add_rule: 'New rule',
     modals_rules_no_rules: 'No rules',

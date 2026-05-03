@@ -160,6 +160,9 @@ const updateDocumentState = (
             state.pinnedNodes,
             action.payload.id,
         );
+    } else if (action.type === 'view/pinned-nodes/set-active-category') {
+        state.pinnedNodes.activeCategory = action.payload.category;
+        state.pinnedNodes = { ...state.pinnedNodes };
     } else if (action.type === 'view/recent-nodes/set-active-node') {
         setActiveRecentNode(
             state.document,

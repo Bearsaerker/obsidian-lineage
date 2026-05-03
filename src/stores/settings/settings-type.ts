@@ -31,6 +31,9 @@ export type DocumentPreferences = {
     pinnedSections: {
         sections: string[];
         activeSection: string | null;
+        fileCategories: string[];                  // file-specific category names
+        nodeToCategory: Record<string, string>;    // section content → category
+        activeCategory: string;                    // "all" | "uncategorized" | category name
     } | null;
     outline: {
         collapsedSections: string[];
@@ -47,6 +50,9 @@ export type Settings = {
     documents: DocumentsPreferences;
     hotkeys: {
         customHotkeys: CustomHotkeys;
+    };
+    categories: {
+        globalCategories: string[]; // base categories available to all files
     };
     view: {
         fontSize: number;

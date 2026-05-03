@@ -15,4 +15,10 @@ export const removeStalePinnedNodes = (
 ) => {
     pinnedNodes.Ids = pinnedNodes.Ids.filter((id) => sections.id_section[id]);
     pinnedNodes.Ids = sortNodeIdsBySectionNumber(sections, pinnedNodes.Ids);
+    // Clean up stale category mappings for deleted nodes
+    for (const nodeId of Object.keys(pinnedNodes.nodeToCategory)) {
+        if (!sections.id_section[nodeId]) {
+            delete pinnedNodes.nodeToCategory[nodeId];
+        }
+    }
 };

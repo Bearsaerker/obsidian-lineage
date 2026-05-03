@@ -113,7 +113,12 @@ export type SidebarActions =
     | EnableEditInSidebar
     | DisableEditInSidebar;
 
-export type PinnedNodesActions = SetActivePinnedNodeAction;
+export type PinnedNodesActions =
+    | SetActivePinnedNodeAction
+    | {
+          type: 'view/pinned-nodes/set-active-category';
+          payload: { category: string };
+      };
 export type RecentNodesActions = SetActiveRecentNodeAction;
 
 export type EnableEditInSidebar = {

@@ -1,65 +1,125 @@
 <script lang="ts">
-    import { PinnedNodesStore } from '../../../../../../stores/document/derived/pinned-nodes-store';
+    import { FilteredPinnedNodesStore } from '../../../../../../stores/document/derived/filtered-pinned-nodes-store';
     import { getView } from '../../../context';
     import { ActiveStatus } from '../../../column/components/group/components/active-status.enum';
     import Node from '../../../column/components/group/components/card/card.svelte';
     import { documentStateStore } from '../../../../../../stores/view/derived/editing-store';
     import { IdSectionStore } from '../../../../../../stores/document/derived/id-section-store';
-    import { ActivePinnedCardStore } from '../../../../../../stores/view/derived/pinned-cards-sidebar';
+    import { ActivePinnedCardStore, ActivePinnedCategoryStore } from '../../../../../../stores/view/derived/pinned-cards-sidebar';
     import NoItems from '../no-items/no-items.svelte';
     import { PendingConfirmationStore } from 'src/stores/view/derived/pending-confirmation';
     import { NodeStylesStore } from 'src/stores/view/derived/style-rules';
     import {
         scrollActivePinnedNode
     } from 'src/view/components/container/left-sidebar/components/pinned-cards/actions/scroll-active-pinned-node';
+    import { lang } from 'src/lang/lang';
 
     const view = getView();
-    const pinnedNodesArray = PinnedNodesStore(view);
+    const filteredPinnedNodes = FilteredPinnedNodesStore(view);
 
     const idSection = IdSectionStore(view);
     const editingStateStore = documentStateStore(view);
 
     const activePinnedCard = ActivePinnedCardStore(view);
+    const activeCategory = ActivePinnedCategoryStore(view);
     const pendingConfirmation = PendingConfirmationStore(view);
     const styleRules = NodeStylesStore(view);
 
+    const setActiveCategory = (category: string) => {
+        view.viewStore.dispatch({
+            type: 'view/pinned-nodes/set-active-category',
+            payload: { category },
+        });
+    };
+
+    const onCategoryChange = (e: Event) => {
+        const target = e.target as HTMLSelectElement;
+        setActiveCategory(target.value);
+    };
+
+    $: categories = $filteredPinnedNodes.categories;
+    $: nodes = $filteredPinnedNodes.nodes;
 
 </script>
 
-<div class="pinned-cards-container" use:scrollActivePinnedNode>
-    {#if $pinnedNodesArray.length > 0}
-        {#each $pinnedNodesArray as node (node)}
-            <Node
-                {node}
-                active={$activePinnedCard === node
-                    ? ActiveStatus.node
-                    : ActiveStatus.sibling}
-                editing={$editingStateStore.activeNodeId === node &&
-                    $editingStateStore.isInSidebar === true}
-                confirmDisableEdit={$editingStateStore.activeNodeId === node &&
-                    $pendingConfirmation.disableEdit === node &&
-                    $editingStateStore.isInSidebar === true}
-                confirmDelete={$pendingConfirmation.deleteNode.has(node)}
-                isInSidebar={true}
-                firstColumn={true}
-                section={$idSection[node]}
-                hasActiveChildren={false}
-                hasChildren={false}
-                selected={false}
-                pinned={false}
-                style={$styleRules.get(node)}
-                outlineMode={false}
-                collapsed={false}
-                hidden={false}
-                alwaysShowCardButtons={true}
-            />
-        {/each}
-    {:else}
-        <NoItems variant="pinned" />
+<div class="pinned-cards-wrapper">
+    {#if categories.length > 0}
+        <div class="category-filter">
+            <select
+                class="category-select"
+                value={$activeCategory}
+                on:change={onCategoryChange}
+            >
+                <option value="all">{lang.sidebar_filter_all}</option>
+                <option value="uncategorized">{lang.sidebar_filter_uncategorized}</option>
+                {#each categories as category}
+                    <option value={category}>{category}</option>
+                {/each}
+            </select>
+        </div>
     {/if}
+    <div class="pinned-cards-container" use:scrollActivePinnedNode>
+        {#if nodes.length > 0}
+            {#each nodes as node (node)}
+                <Node
+                    {node}
+                    active={$activePinnedCard === node
+                        ? ActiveStatus.node
+                        : ActiveStatus.sibling}
+                    editing={$editingStateStore.activeNodeId === node &&
+                        $editingStateStore.isInSidebar === true}
+                    confirmDisableEdit={$editingStateStore.activeNodeId === node &&
+                        $pendingConfirmation.disableEdit === node &&
+                        $editingStateStore.isInSidebar === true}
+                    confirmDelete={$pendingConfirmation.deleteNode.has(node)}
+                    isInSidebar={true}
+                    firstColumn={true}
+                    section={$idSection[node]}
+                    hasActiveChildren={false}
+                    hasChildren={false}
+                    selected={false}
+                    pinned={false}
+                    style={$styleRules.get(node)}
+                    outlineMode={false}
+                    collapsed={false}
+                    hidden={false}
+                    alwaysShowCardButtons={true}
+                />
+            {/each}
+        {:else}
+            <NoItems variant="pinned" />
+        {/if}
+    </div>
 </div>
 
 <style>
+    .pinned-cards-wrapper {
+        height: 100%;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .category-filter {
+        padding: 0 10px;
+        margin-bottom: 10px;
+    }
+
+    .category-select {
+        width: 100%;
+        padding: 6px 8px;
+        border-radius: 4px;
+        border: 1px solid var(--background-modifier-border);
+        background-color: var(--background-primary);
+        color: var(--text-normal);
+        font-size: var(--font-ui-small);
+        cursor: pointer;
+    }
+
+    .category-select:hover {
+        border-color: var(--interactive-accent);
+    }
+
     .pinned-cards-container {
         height: 100%;
         width: 100%;

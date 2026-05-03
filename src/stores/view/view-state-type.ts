@@ -30,6 +30,7 @@ export type DocumentViewState = {
 };
 export type PinnedNodes = {
     activeNode: string;
+    activeCategory: string; // "all" | "uncategorized" | category name
 };
 export type RecentNodes = {
     activeNode: string;

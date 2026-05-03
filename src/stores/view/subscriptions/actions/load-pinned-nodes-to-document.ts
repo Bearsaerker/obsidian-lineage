@@ -24,6 +24,8 @@ export const loadPinnedNodesToDocument = (view: LineageView) => {
             type: 'document/pinned-nodes/load-from-settings',
             payload: {
                 sections: persistedDocument.pinnedSections.sections,
+                fileCategories: persistedDocument.pinnedSections.fileCategories || [],
+                nodeToCategory: persistedDocument.pinnedSections.nodeToCategory || {},
             },
         });
     }
@@ -33,5 +35,13 @@ export const loadPinnedNodesToDocument = (view: LineageView) => {
         if (id) {
             setActivePinnedNode(view, id);
         }
+    }
+    // Load active category
+    const activeCategory = persistedDocument.pinnedSections.activeCategory;
+    if (activeCategory) {
+        view.viewStore.dispatch({
+            type: 'view/pinned-nodes/set-active-category',
+            payload: { category: activeCategory },
+        });
     }
 };
