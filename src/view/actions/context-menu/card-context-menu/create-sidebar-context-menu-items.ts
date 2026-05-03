@@ -45,7 +45,10 @@ const createCategorySubmenu = (
             icon: 'tag',
             checked: currentCategory === category,
             action: () => {
-                if (currentCategory === category) {
+                // Re-read current category at execution time
+                const docState = view.documentStore.getValue();
+                const nodeCategory = docState.pinnedNodes.nodeToCategory[activeNode];
+                if (nodeCategory === category) {
                     // Remove category if already assigned
                     view.documentStore.dispatch({
                         type: 'document/pinned-nodes/remove-category',
@@ -116,17 +119,22 @@ const createCategorySubmenu = (
                 icon: 'trash-2',
                 dangerous: true,
                 action: () => {
-                    view.documentStore.dispatch({
-                        type: 'document/pinned-nodes/delete-category',
-                        payload: { name: currentCategory },
-                    });
-                    // Reset active category if it was the deleted one
-                    const viewState = view.viewStore.getValue();
-                    if (viewState.pinnedNodes.activeCategory === currentCategory) {
-                        view.viewStore.dispatch({
-                            type: 'view/pinned-nodes/set-active-category',
-                            payload: { category: 'all' },
+                    // Re-read current category at execution time
+                    const docState = view.documentStore.getValue();
+                    const nodeCategory = docState.pinnedNodes.nodeToCategory[activeNode];
+                    if (nodeCategory) {
+                        view.documentStore.dispatch({
+                            type: 'document/pinned-nodes/delete-category',
+                            payload: { name: nodeCategory },
                         });
+                        // Reset active category if it was the deleted one
+                        const viewState = view.viewStore.getValue();
+                        if (viewState.pinnedNodes.activeCategory === nodeCategory) {
+                            view.viewStore.dispatch({
+                                type: 'view/pinned-nodes/set-active-category',
+                                payload: { category: 'all' },
+                            });
+                        }
                     }
                     persistPinnedNodes(view);
                 },
