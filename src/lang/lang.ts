@@ -293,6 +293,7 @@ export const lang = {
     cm_category: 'Category',
     cm_create_category: 'Create new category...',
     cm_remove_category: 'Remove category',
+    cm_delete_category: 'Delete category',
     modal_new_category_placeholder: 'Enter category name...',
     modal_button_cancel: 'Cancel',
     modal_button_create: 'Create',

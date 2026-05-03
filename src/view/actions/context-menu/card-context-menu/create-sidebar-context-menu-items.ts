@@ -106,6 +106,24 @@ const createCategorySubmenu = (
                 persistPinnedNodes(view);
             },
         });
+
+        // Add "Delete category" option (only for file-specific categories)
+        // Global categories can never be deleted
+        const isGlobalCategory = globalCategories.includes(currentCategory);
+        if (!isGlobalCategory) {
+            items.push({
+                title: lang.cm_delete_category,
+                icon: 'trash-2',
+                dangerous: true,
+                action: () => {
+                    view.documentStore.dispatch({
+                        type: 'document/pinned-nodes/delete-category',
+                        payload: { name: currentCategory },
+                    });
+                    persistPinnedNodes(view);
+                },
+            });
+        }
     }
 
     return items;
