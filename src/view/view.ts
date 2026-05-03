@@ -194,7 +194,7 @@ export class LineageView extends TextFileView {
             stringifyDocument(state.document, getPersistedDocumentFormat(this));
         if (data !== this.data) {
             if (data.trim().length === 0) {
-                throw new Error(lang.error_save_empty_data);
+                return; // Silently skip save when document is empty (e.g., during initialization)
             }
             this.data = data;
             this.requestSave();
