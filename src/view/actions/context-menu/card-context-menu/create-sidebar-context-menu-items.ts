@@ -120,6 +120,14 @@ const createCategorySubmenu = (
                         type: 'document/pinned-nodes/delete-category',
                         payload: { name: currentCategory },
                     });
+                    // Reset active category if it was the deleted one
+                    const viewState = view.viewStore.getValue();
+                    if (viewState.pinnedNodes.activeCategory === currentCategory) {
+                        view.viewStore.dispatch({
+                            type: 'view/pinned-nodes/set-active-category',
+                            payload: { category: 'all' },
+                        });
+                    }
                     persistPinnedNodes(view);
                 },
             });

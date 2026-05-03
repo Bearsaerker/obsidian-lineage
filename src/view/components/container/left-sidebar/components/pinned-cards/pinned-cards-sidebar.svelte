@@ -13,6 +13,9 @@
         scrollActivePinnedNode
     } from 'src/view/components/container/left-sidebar/components/pinned-cards/actions/scroll-active-pinned-node';
     import { lang } from 'src/lang/lang';
+    import { renderContextMenu } from 'src/obsidian/context-menu/render-context-menu';
+    import { MenuItemObject } from 'src/obsidian/context-menu/render-context-menu';
+    import { persistPinnedNodes } from 'src/stores/view/subscriptions/actions/persist-pinned-nodes';
 
     const view = getView();
     const filteredPinnedNodes = FilteredPinnedNodesStore(view);
@@ -37,6 +40,79 @@
         setActiveCategory(target.value);
     };
 
+    const onDeleteCategory = (categoryName: string) => {
+        const settingsState = view.plugin.settings.getValue();
+        const isGlobal = settingsState.categories.globalCategories.includes(categoryName);
+
+        if (!isGlobal) {
+            view.documentStore.dispatch({
+                type: 'document/pinned-nodes/delete-category',
+                payload: { name: categoryName },
+            });
+            // Reset active category if it was the deleted one
+            if ($activeCategory === categoryName) {
+                setActiveCategory('all');
+            }
+            persistPinnedNodes(view);
+        }
+    };
+
+    const onCategoryContextMenu = (e: MouseEvent) => {
+        e.preventDefault();
+        const settingsState = view.plugin.settings.getValue();
+        const globalCategories = settingsState.categories.globalCategories;
+
+        const menuItems: MenuItemObject[] = [];
+
+        // Add "All" and "Uncategorized" options
+        menuItems.push({
+            title: lang.sidebar_filter_all,
+            icon: 'layers',
+            checked: $activeCategory === 'all',
+            action: () => setActiveCategory('all'),
+        });
+        menuItems.push({
+            title: lang.sidebar_filter_uncategorized,
+            icon: 'folder-open',
+            checked: $activeCategory === 'uncategorized',
+            action: () => setActiveCategory('uncategorized'),
+        });
+
+        menuItems.push({ type: 'separator' });
+
+        // Add category options
+        for (const category of categories) {
+            const isGlobal = globalCategories.includes(category);
+            const items: MenuItemObject[] = [
+                {
+                    title: category,
+                    icon: 'tag',
+                    checked: $activeCategory === category,
+                    action: () => setActiveCategory(category),
+                },
+            ];
+
+            // Add delete option for file-specific categories only
+            if (!isGlobal) {
+                items.push({
+                    title: lang.cm_delete_category,
+                    icon: 'trash-2',
+                    dangerous: true,
+                    action: () => onDeleteCategory(category),
+                });
+            }
+
+            menuItems.push({
+                title: category,
+                icon: 'tag',
+                checked: $activeCategory === category,
+                submenu: items,
+            });
+        }
+
+        renderContextMenu(e, menuItems);
+    };
+
     $: categories = $filteredPinnedNodes.categories;
     $: nodes = $filteredPinnedNodes.nodes;
 
@@ -44,7 +120,7 @@
 
 <div class="pinned-cards-wrapper">
     {#if categories.length > 0}
-        <div class="category-filter">
+        <div class="category-filter" on:contextmenu={onCategoryContextMenu}>
             <select
                 class="category-select"
                 value={$activeCategory}
