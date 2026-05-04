@@ -145,7 +145,11 @@ const updateDocumentState = (
         unpinNode(state.pinnedNodes, action.payload.id);
         return;
     } else if (action.type === 'document/pinned-nodes/remove-stale-nodes') {
-        removeStalePinnedNodes(state.pinnedNodes, state.sections);
+        removeStalePinnedNodes(
+            state.pinnedNodes,
+            state.sections,
+            action.payload?.oldSections,
+        );
         return;
     } else if (action.type === 'document/pinned-nodes/load-from-settings') {
         loadPinnedNodes(

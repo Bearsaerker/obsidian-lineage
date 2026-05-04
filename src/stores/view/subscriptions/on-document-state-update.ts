@@ -43,8 +43,15 @@ export const onDocumentStateUpdate = (
         viewStore.dispatch({
             type: 'view/outline/refresh-collapsed-nodes',
         });
+        // Pass old sections when file is reloaded so pinned nodes can be remapped
+        // by section number (node IDs are random and change on each reload)
+        const oldSections =
+            type === 'document/file/load-from-disk'
+                ? action.payload.oldSections
+                : undefined;
         documentStore.dispatch({
             type: 'document/pinned-nodes/remove-stale-nodes',
+            payload: oldSections ? { oldSections } : undefined,
         });
         documentStore.dispatch({
             type: 'document/meta/refresh-group-parent-ids',

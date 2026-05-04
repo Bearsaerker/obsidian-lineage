@@ -270,7 +270,16 @@ export class LineageView extends TextFileView {
             ? documentState.sections.id_section[activeNode]
             : null;
         if (emptyStore || (bodyHasChanged && !isEditing)) {
-            loadFullDocument(this, body, frontmatter, format, activeSection);
+            // Capture old sections before loading to remap pinned nodes
+            const oldSections = documentState.sections;
+            loadFullDocument(
+                this,
+                body,
+                frontmatter,
+                format,
+                activeSection,
+                oldSections,
+            );
             if (this.isActive && event !== 'view-mount') {
                 new Notice('Document updated externally');
             }
