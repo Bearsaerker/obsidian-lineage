@@ -59,6 +59,7 @@ const updateDocumentState = (
             showHelpSidebar: false,
             showSettingsSidebar: false,
             showStyleRulesModal: false,
+            showLeftSidebar: state.ui.controls.showLeftSidebar,
         };
     } else if (action.type === 'view/hotkeys/toggle-modal') {
         const showHelpSidebar = state.ui.controls.showHelpSidebar;
@@ -67,6 +68,7 @@ const updateDocumentState = (
             showHelpSidebar: !showHelpSidebar,
             showSettingsSidebar: false,
             showStyleRulesModal: false,
+            showLeftSidebar: state.ui.controls.showLeftSidebar,
         };
     } else if (action.type === 'view/settings/toggle-modal') {
         const showSettingsSidebar = state.ui.controls.showSettingsSidebar;
@@ -75,6 +77,13 @@ const updateDocumentState = (
             showHelpSidebar: false,
             showSettingsSidebar: !showSettingsSidebar,
             showStyleRulesModal: false,
+            showLeftSidebar: state.ui.controls.showLeftSidebar,
+        };
+    } else if (action.type === 'view/left-sidebar/toggle') {
+        const showLeftSidebar = state.ui.controls.showLeftSidebar;
+        state.ui.controls = {
+            ...state.ui.controls,
+            showLeftSidebar: !showLeftSidebar,
         };
     } else if (action.type === 'view/close-modals') {
         state.ui.controls = {
@@ -84,6 +93,7 @@ const updateDocumentState = (
                 : state.ui.controls.showHelpSidebar,
             showSettingsSidebar: false,
             showStyleRulesModal: false,
+            showLeftSidebar: state.ui.controls.showLeftSidebar,
         };
     } else if (action.type === 'view/editor/enable-main-editor') {
         if (state.document.activeNode !== action.payload.nodeId) {
@@ -178,6 +188,7 @@ const updateDocumentState = (
             showStyleRulesModal: !showStyleRulesModal,
             showSettingsSidebar: false,
             showHelpSidebar: false,
+            showLeftSidebar: state.ui.controls.showLeftSidebar,
         };
     } else if (action.type === 'view/style-rules/update-results') {
         if (!action.payload.results) {

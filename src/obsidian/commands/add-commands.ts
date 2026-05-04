@@ -235,7 +235,8 @@ const createCommands = (plugin: Lineage) => {
             if (checking) {
                 return Boolean(view);
             }
-            plugin.settings.dispatch({ type: 'view/left-sidebar/toggle' });
+            if (!view) return;
+            view.viewStore.dispatch({ type: 'view/left-sidebar/toggle' });
         },
     });
 

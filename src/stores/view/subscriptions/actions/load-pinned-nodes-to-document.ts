@@ -13,9 +13,10 @@ export const loadPinnedNodesToDocument = (view: LineageView) => {
 
     if (persistedDocument.pinnedSections.sections.length === 0) {
         const activeLeftSideTab = settingsState.view.leftSidebarActiveTab;
-        const showLeftSidebarStore = settingsState.view.showLeftSidebar;
-        if (showLeftSidebarStore && activeLeftSideTab === 'pinned-cards') {
-            settingsStore.dispatch({ type: 'view/left-sidebar/toggle' });
+        const viewState = view.viewStore.getValue();
+        const showLeftSidebar = viewState.ui.controls.showLeftSidebar;
+        if (showLeftSidebar && activeLeftSideTab === 'pinned-cards') {
+            view.viewStore.dispatch({ type: 'view/left-sidebar/toggle' });
         }
         return;
     }

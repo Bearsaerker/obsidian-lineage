@@ -116,9 +116,6 @@ export type SettingsActions =
     | {
           type: 'settings/view/toggle-minimap';
       }
-    | {
-          type: 'view/left-sidebar/toggle';
-      }
     | { type: 'view/left-sidebar/set-width'; payload: { width: number } }
     | {
           type: 'view/left-sidebar/set-active-tab';

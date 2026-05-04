@@ -6,7 +6,7 @@ export const ViewSettingsStore = (view: LineageView) =>
     derived(view.plugin.settings, (state) => state.view);
 
 export const ShowLeftSidebarStore = (view: LineageView) =>
-    derived(view.plugin.settings, (state) => state.view.showLeftSidebar);
+    derived(view.viewStore, (state) => state.ui.controls.showLeftSidebar);
 
 export const LeftSidebarWidthStore = (view: LineageView) =>
     derived(view.plugin.settings, (state) => state.view.leftSidebarWidth);

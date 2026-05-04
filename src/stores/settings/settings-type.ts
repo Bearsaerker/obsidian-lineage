@@ -65,7 +65,6 @@ export type Settings = {
         limitPreviewHeight: boolean;
         zoomLevel: number;
         showMinimap: boolean;
-        showLeftSidebar: boolean;
         leftSidebarWidth: number;
         leftSidebarActiveTab: LeftSidebarTab;
         applyGapBetweenCards: boolean;

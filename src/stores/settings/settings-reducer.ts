@@ -78,8 +78,6 @@ const updateState = (store: Settings, action: SettingsActions) => {
         store.general.defaultDocumentFormat = action.payload.format;
     } else if (action.type === 'settings/view/toggle-minimap') {
         store.view.showMinimap = !store.view.showMinimap;
-    } else if (action.type === 'view/left-sidebar/toggle') {
-        store.view.showLeftSidebar = !store.view.showLeftSidebar;
     } else if (action.type === 'settings/pinned-nodes/persist') {
         const document = store.documents[action.payload.filePath];
         if (!document.pinnedSections) {

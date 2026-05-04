@@ -15,6 +15,7 @@ export const defaultViewState = (): ViewState => ({
             showHelpSidebar: false,
             showSettingsSidebar: false,
             showStyleRulesModal: false,
+            showLeftSidebar: false,
         },
     },
     document: {

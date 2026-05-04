@@ -50,6 +50,7 @@ export type ViewState = {
             showHelpSidebar: boolean;
             showSettingsSidebar: boolean;
             showStyleRulesModal: boolean;
+            showLeftSidebar: boolean;
         };
     };
     document: DocumentViewState;
