@@ -17,6 +17,7 @@ import { onPluginError } from 'src/lib/store/on-plugin-error';
 import invariant from 'tiny-invariant';
 import { sortChildNodes } from 'src/view/actions/context-menu/card-context-menu/helpers/sort-child-nodes';
 import { ejectDocument } from 'src/obsidian/commands/helpers/export-document/eject-document';
+import { isSidebarActive } from 'src/view/actions/keyboard-shortcuts/helpers/commands/commands/helpers/sidebar-navigation';
 
 const createCommands = (plugin: Lineage) => {
     const commands: (Omit<Command, 'id' | 'callback'> & {
@@ -125,7 +126,9 @@ const createCommands = (plugin: Lineage) => {
             if (checking) {
                 return Boolean(view);
             }
-            copyLinkToBlock(view!, false);
+            // Detect if sidebar is active to copy from the correct context
+            const isInSidebar = isSidebarActive(view!);
+            copyLinkToBlock(view!, isInSidebar);
         },
     });
 
