@@ -1,4 +1,5 @@
 import { PinnedNodesState } from 'src/stores/document/document-state-type';
+import { isGlobalCategoryValue } from 'src/stores/settings/types/global-categories-types';
 
 export type SetCategoryAction = {
     type: 'document/pinned-nodes/set-category';
@@ -14,8 +15,10 @@ export const setCategory = (
     category: string,
 ) => {
     pinnedNodes.nodeToCategory[id] = category;
-    // Ensure the category exists in fileCategories
+    // Global category values are namespaced (`global:<id>`) and must never
+    // be added to the file-specific category list
     if (
+        !isGlobalCategoryValue(category) &&
         pinnedNodes.fileCategories &&
         !pinnedNodes.fileCategories.includes(category)
     ) {

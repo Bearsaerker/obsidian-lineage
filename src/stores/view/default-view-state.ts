@@ -58,6 +58,12 @@ export const defaultViewState = (): ViewState => ({
     recentNodes: {
         activeNode: '',
     },
+    similarCards: {
+        nodeIds: [],
+        scores: new Map(),
+        query: '',
+        loading: false,
+    },
     styleRules: {
         nodeStyles: new Map(),
         allMatches: new Map(),

@@ -224,6 +224,25 @@ const updateDocumentState = (
         }
         expandParentsOfActiveNode(state, context.columns);
         state.outline = { ...state.outline };
+    } else if (action.type === 'view/similar-cards/set-results') {
+        state.similarCards = {
+            nodeIds: action.payload.nodeIds,
+            scores: action.payload.scores,
+            query: action.payload.query,
+            loading: false,
+        };
+    } else if (action.type === 'view/similar-cards/set-loading') {
+        state.similarCards = {
+            ...state.similarCards,
+            loading: action.payload.loading,
+        };
+    } else if (action.type === 'view/similar-cards/clear') {
+        state.similarCards = {
+            nodeIds: [],
+            scores: new Map(),
+            query: '',
+            loading: false,
+        };
     }
     if (activeNode !== state.document.activeNode) {
         updateActiveBranch(state.document, context.columns, false);

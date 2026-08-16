@@ -187,15 +187,69 @@ export type SettingsActions =
           };
       }
     | {
-          type: 'settings/categories/add-global-category';
+          type: 'settings/categories/global/create-folder';
           payload: {
+              parentId: string | null;
               name: string;
           };
       }
     | {
-          type: 'settings/categories/delete-global-category';
+          type: 'settings/categories/global/create-category';
           payload: {
+              parentId: string | null;
               name: string;
+          };
+      }
+    | {
+          type: 'settings/categories/global/rename';
+          payload: {
+              id: string;
+              name: string;
+          };
+      }
+    | {
+          type: 'settings/categories/global/delete';
+          payload: {
+              id: string;
+          };
+      }
+    | {
+          type: 'settings/categories/global/move';
+          payload: {
+              id: string;
+              newParentId: string | null;
+              index?: number;
+          };
+      }
+    | {
+          type: 'settings/categories/global/add-card';
+          payload: {
+              categoryId: string;
+              filePath: string;
+              section: string;
+          };
+      }
+    | {
+          type: 'settings/categories/global/remove-card';
+          payload: {
+              categoryId: string;
+              filePath: string;
+              section: string;
+          };
+      }
+    | {
+          type: 'settings/categories/global/move-card';
+          payload: {
+              categoryId: string;
+              filePath: string;
+              section: string;
+              toIndex: number;
+          };
+      }
+    | {
+          type: 'settings/categories/global/set-enabled';
+          payload: {
+              enabled: boolean;
           };
       };
 export type PersistCollapsedSectionsAction = {

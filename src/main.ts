@@ -40,6 +40,12 @@ import {
     registerHighlights,
     clearHighlights,
 } from 'src/lib/highlight-registry';
+import {
+    GLOBAL_CATEGORIES_VIEW_TYPE,
+    GlobalCategoriesView,
+} from 'src/obsidian/views/global-categories-view';
+import { openGlobalCategoriesView } from 'src/obsidian/events/workspace/effects/open-global-categories-view';
+import { lang } from 'src/lang/lang';
 
 export type SettingsStore = Store<Settings, SettingsActions>;
 export type PluginStore = Store<PluginState, PluginStoreActions>;
@@ -83,6 +89,10 @@ export default class Lineage extends Plugin {
         this.registerView(
             LINEAGE_VIEW_TYPE,
             (leaf) => new LineageView(leaf, this),
+        );
+        this.registerView(
+            GLOBAL_CATEGORIES_VIEW_TYPE,
+            (leaf) => new GlobalCategoriesView(leaf, this),
         );
         addCommands(this);
         this.registerPatches();
@@ -139,6 +149,13 @@ export default class Lineage extends Plugin {
                 const file = getActiveFile(this);
                 if (file) toggleFileViewType(this, file, undefined);
                 else createLineageDocument(this);
+            },
+        );
+        this.addRibbonIcon(
+            customIcons.folderTree.name,
+            lang.global_categories_view_title,
+            () => {
+                openGlobalCategoriesView(this);
             },
         );
     }

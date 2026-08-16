@@ -35,6 +35,12 @@ export type PinnedNodes = {
 export type RecentNodes = {
     activeNode: string;
 };
+export type SimilarCardsState = {
+    nodeIds: string[];
+    scores: Map<string, number>;
+    query: string;
+    loading: boolean;
+};
 export type ViewState = {
     search: {
         query: string;
@@ -57,6 +63,7 @@ export type ViewState = {
     navigationHistory: NavigationHistory;
     pinnedNodes: PinnedNodes;
     recentNodes: RecentNodes;
+    similarCards: SimilarCardsState;
     styleRules: {
         nodeStyles: Map<string, NodeStyle>;
         allMatches: Map<string, string[]>;

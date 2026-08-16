@@ -2,6 +2,10 @@ import { CommandName } from 'src/lang/hotkey-groups';
 import { StyleRule } from 'src/stores/settings/types/style-rules-types';
 import { PersistedViewHotkey } from 'src/view/actions/keyboard-shortcuts/helpers/commands/default-view-hotkeys';
 import { ToolbarButton } from 'src/view/modals/vertical-toolbar-buttons/vertical-toolbar-buttons';
+import {
+    GlobalCardRef,
+    GlobalCategoryNode,
+} from 'src/stores/settings/types/global-categories-types';
 
 export type CustomHotkeys = {
     [command in CommandName]?: {
@@ -40,7 +44,7 @@ export type DocumentPreferences = {
     } | null;
 };
 
-export type LeftSidebarTab = 'pinned-cards' | 'recent-cards';
+export type LeftSidebarTab = 'pinned-cards' | 'recent-cards' | 'similar-cards';
 
 export type RulesTab = 'global-rules' | 'document-rules';
 
@@ -52,7 +56,9 @@ export type Settings = {
         customHotkeys: CustomHotkeys;
     };
     categories: {
-        globalCategories: string[]; // base categories available to all files
+        tree: GlobalCategoryNode[]; // root nodes of the global category tree
+        globalCards: Record<string, GlobalCardRef[]>; // categoryId -> cards
+        globalCategoriesEnabled: boolean; // sidebar availability toggle
     };
     view: {
         fontSize: number;

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { onDestroy } from 'svelte';
     import { FilteredPinnedNodesStore } from '../../../../../../stores/document/derived/filtered-pinned-nodes-store';
     import { getView } from '../../../context';
     import { ActiveStatus } from '../../../column/components/group/components/active-status.enum';
@@ -16,9 +17,35 @@
     import { renderContextMenu } from 'src/obsidian/context-menu/render-context-menu';
     import { MenuItemObject } from 'src/obsidian/context-menu/render-context-menu';
     import { persistPinnedNodes } from 'src/stores/view/subscriptions/actions/persist-pinned-nodes';
+    import { openGlobalCategoriesView } from 'src/obsidian/events/workspace/effects/open-global-categories-view';
 
     const view = getView();
     const filteredPinnedNodes = FilteredPinnedNodesStore(view);
+
+    // global categories availability toggle (stored in settings)
+    let globalCategoriesEnabled = true;
+    const unsubGlobalToggle = view.plugin.settings.subscribe((state) => {
+        globalCategoriesEnabled = state.categories.globalCategoriesEnabled;
+    });
+    onDestroy(() => unsubGlobalToggle());
+
+    const onToggleGlobalCategories = (e: Event) => {
+        const enabled = (e.target as HTMLInputElement).checked;
+        if (!enabled) {
+            // reset the filter if a global category was active (it won't be
+            // selectable anymore once the feature is disabled)
+            const globalPaths = new Set(
+                $filteredPinnedNodes.globalEntries.map((g) => g.path),
+            );
+            if ($activeCategory && globalPaths.has($activeCategory)) {
+                setActiveCategory('all');
+            }
+        }
+        view.plugin.settings.dispatch({
+            type: 'settings/categories/global/set-enabled',
+            payload: { enabled },
+        });
+    };
 
     const idSection = IdSectionStore(view);
     const editingStateStore = documentStateStore(view);
@@ -41,28 +68,33 @@
     };
 
     const onDeleteCategory = (categoryName: string) => {
-        const settingsState = view.plugin.settings.getValue();
-        const isGlobal = settingsState.categories.globalCategories.includes(categoryName);
-
-        if (!isGlobal) {
-            view.documentStore.dispatch({
-                type: 'document/pinned-nodes/delete-category',
-                payload: { name: categoryName },
-            });
-            // Reset active category if it was the deleted one
-            if ($activeCategory === categoryName) {
-                setActiveCategory('all');
-            }
-            persistPinnedNodes(view);
+        view.documentStore.dispatch({
+            type: 'document/pinned-nodes/delete-category',
+            payload: { name: categoryName },
+        });
+        // Reset active category if it was the deleted one
+        if ($activeCategory === categoryName) {
+            setActiveCategory('all');
         }
+        persistPinnedNodes(view);
     };
 
     const onCategoryContextMenu = (e: MouseEvent) => {
         e.preventDefault();
-        const settingsState = view.plugin.settings.getValue();
-        const globalCategories = settingsState.categories.globalCategories;
+        const globalEntryPaths = new Set(
+            $filteredPinnedNodes.globalEntries.map((entry) => entry.path),
+        );
 
         const menuItems: MenuItemObject[] = [];
+
+        if (globalCategoriesEnabled) {
+            menuItems.push({
+                title: lang.cm_open_global_categories,
+                icon: 'globe',
+                action: () => openGlobalCategoriesView(view.plugin),
+            });
+            menuItems.push({ type: 'separator' });
+        }
 
         // Add "All" and "Uncategorized" options
         menuItems.push({
@@ -82,7 +114,7 @@
 
         // Add category options
         for (const category of categories) {
-            const isGlobal = globalCategories.includes(category);
+            const isGlobal = globalEntryPaths.has(category);
             const items: MenuItemObject[] = [
                 {
                     title: category,
@@ -119,6 +151,20 @@
 </script>
 
 <div class="pinned-cards-wrapper">
+    <div
+        class="global-categories-toggle"
+        title={lang.global_categories_toggle_title}
+    >
+        <span class="global-categories-toggle__label">
+            {lang.global_categories_toggle_label}
+        </span>
+        <input
+            type="checkbox"
+            class="global-categories-toggle__checkbox"
+            checked={globalCategoriesEnabled}
+            on:change={onToggleGlobalCategories}
+        />
+    </div>
     {#if categories.length > 0}
         <div class="category-filter" on:contextmenu={onCategoryContextMenu}>
             <select
@@ -174,6 +220,28 @@
         width: 100%;
         display: flex;
         flex-direction: column;
+    }
+
+    .global-categories-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 6px 10px;
+        margin-bottom: 4px;
+        font-size: var(--font-ui-small);
+        color: var(--text-normal);
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .global-categories-toggle:hover {
+        background-color: var(--background-modifier-hover);
+    }
+
+    .global-categories-toggle__checkbox {
+        cursor: pointer;
+        flex: 0 0 auto;
     }
 
     .category-filter {

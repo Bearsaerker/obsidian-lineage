@@ -11,7 +11,9 @@ export const DEFAULT_SETTINGS = (): Settings => ({
         customHotkeys: {},
     },
     categories: {
-        globalCategories: [],
+        tree: [],
+        globalCards: {},
+        globalCategoriesEnabled: true,
     },
     view: {
         fontSize: 16,

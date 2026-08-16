@@ -7,6 +7,7 @@ import { customIcons } from 'src/helpers/load-custom-icons';
 import { getActiveFile } from 'src/obsidian/commands/helpers/get-active-file';
 import { createLineageDocument } from 'src/obsidian/events/workspace/effects/create-lineage-document';
 import { getActiveLineageView } from 'src/obsidian/commands/helpers/get-active-lineage-view';
+import { openGlobalCategoriesView } from 'src/obsidian/events/workspace/effects/open-global-categories-view';
 import { openSplitNodeModal } from 'src/view/modals/split-node-modal/open-split-node-modal';
 import { isEditing } from 'src/view/actions/keyboard-shortcuts/helpers/commands/commands/helpers/is-editing';
 import { copyLinkToBlock } from 'src/view/actions/context-menu/card-context-menu/helpers/copy-link-to-block';
@@ -14,10 +15,11 @@ import { extractBranch } from 'src/obsidian/commands/helpers/extract-branch/extr
 import { exportSelection } from 'src/view/actions/context-menu/card-context-menu/helpers/export-selection';
 import { exportDocument } from 'src/obsidian/commands/helpers/export-document/export-document';
 import { onPluginError } from 'src/lib/store/on-plugin-error';
-import invariant from 'tiny-invariant';
 import { sortChildNodes } from 'src/view/actions/context-menu/card-context-menu/helpers/sort-child-nodes';
 import { ejectDocument } from 'src/obsidian/commands/helpers/export-document/eject-document';
 import { isSidebarActive } from 'src/view/actions/keyboard-shortcuts/helpers/commands/commands/helpers/sidebar-navigation';
+import { getActiveGlobalCardContext } from 'src/view/components/global-categories/helpers/global-view-keyboard';
+import type { LineageView } from 'src/view/view';
 
 const createCommands = (plugin: Lineage) => {
     const commands: (Omit<Command, 'id' | 'callback'> & {
@@ -43,6 +45,15 @@ const createCommands = (plugin: Lineage) => {
         checkCallback: (checking) => {
             if (checking) return true;
             createLineageDocument(plugin);
+        },
+    });
+
+    commands.push({
+        name: lang.cmd_open_global_categories,
+        icon: customIcons.folderTree.name,
+        checkCallback: (checking) => {
+            if (checking) return true;
+            openGlobalCategoriesView(plugin);
         },
     });
 
@@ -80,7 +91,8 @@ const createCommands = (plugin: Lineage) => {
             if (checking) {
                 return Boolean(view);
             }
-            openSplitNodeModal(view!);
+            if (!view) return;
+            openSplitNodeModal(view);
         },
     });
 
@@ -92,7 +104,7 @@ const createCommands = (plugin: Lineage) => {
             if (checking) {
                 return Boolean(view);
             }
-            invariant(view);
+            if (!view) return;
             sortChildNodes(
                 view,
                 view.viewStore.getValue().document.activeNode,
@@ -109,7 +121,7 @@ const createCommands = (plugin: Lineage) => {
             if (checking) {
                 return Boolean(view);
             }
-            invariant(view);
+            if (!view) return;
             sortChildNodes(
                 view,
                 view.viewStore.getValue().document.activeNode,
@@ -123,12 +135,26 @@ const createCommands = (plugin: Lineage) => {
         icon: 'links-coming-in',
         checkCallback: (checking) => {
             const view = getActiveLineageView(plugin);
+            const globalContext = getActiveGlobalCardContext();
             if (checking) {
-                return Boolean(view);
+                return Boolean(view) || Boolean(globalContext);
             }
-            // Detect if sidebar is active to copy from the correct context
-            const isInSidebar = isSidebarActive(view!);
-            copyLinkToBlock(view!, isInSidebar);
+            // Lineage view focused → copy from the active card/sidebar context
+            if (view) {
+                // Detect if sidebar is active to copy from the correct context
+                const isInSidebar = isSidebarActive(view);
+                copyLinkToBlock(view, isInSidebar);
+                return true;
+            }
+            // Global categories view focused → copy the selected card
+            if (globalContext) {
+                copyLinkToBlock(
+                    globalContext.virtualView as unknown as LineageView,
+                    true,
+                );
+                return true;
+            }
+            return false;
         },
     });
 
@@ -164,7 +190,8 @@ const createCommands = (plugin: Lineage) => {
             if (checking) {
                 return Boolean(view);
             }
-            extractBranch(view!);
+            if (!view) return;
+            extractBranch(view);
         },
     });
 
@@ -176,7 +203,8 @@ const createCommands = (plugin: Lineage) => {
             if (checking) {
                 return Boolean(view);
             }
-            exportSelection(view!, true);
+            if (!view) return;
+            exportSelection(view, true);
         },
     });
 
@@ -188,7 +216,8 @@ const createCommands = (plugin: Lineage) => {
             if (checking) {
                 return Boolean(view);
             }
-            exportSelection(view!, false);
+            if (!view) return;
+            exportSelection(view, false);
         },
     });
 
@@ -200,7 +229,8 @@ const createCommands = (plugin: Lineage) => {
             if (checking) {
                 return Boolean(view);
             }
-            exportDocument(view!);
+            if (!view) return;
+            exportDocument(view);
         },
     });
 
@@ -212,7 +242,8 @@ const createCommands = (plugin: Lineage) => {
             if (checking) {
                 return Boolean(view);
             }
-            ejectDocument(view!);
+            if (!view) return;
+            ejectDocument(view);
         },
     });
 
@@ -251,7 +282,8 @@ const createCommands = (plugin: Lineage) => {
             if (checking) {
                 return Boolean(view);
             }
-            view!.plugin.settings.dispatch({
+            if (!view) return;
+            view.plugin.settings.dispatch({
                 type: 'view/modes/gap-between-cards/toggle',
             });
         },

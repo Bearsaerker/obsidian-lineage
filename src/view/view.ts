@@ -43,7 +43,6 @@ import {
 import { MinimapStoreAction } from 'src/stores/minimap/minimap-store-actions';
 import { StyleRulesProcessor } from 'src/stores/view/subscriptions/effects/style-rules/style-rules-processor';
 import { AlignBranch } from 'src/stores/view/subscriptions/effects/align-branch/align-branch';
-import { lang } from 'src/lang/lang';
 import { DebouncedMinimapEffects } from 'src/stores/minimap/subscriptions/effects/debounced-minimap-effects';
 import { updateFrontmatter } from 'src/stores/view/subscriptions/actions/document/update-frontmatter';
 import { loadFullDocument } from 'src/stores/view/subscriptions/actions/document/load-full-document';
@@ -248,6 +247,13 @@ export class LineageView extends TextFileView {
             this.plugin.store.getValue().documents[
                 this.file.path
             ].documentStore;
+        // Claim ownership of the document so this view saves content changes
+        // (e.g. when the store was created as a background store by the
+        // global categories view).
+        this.plugin.store.dispatch({
+            type: 'plugin/documents/refresh-active-view-of-document',
+            payload: { views: [[this.id, this.file.path]] },
+        });
     };
 
     private loadDocumentToStore = (event?: 'view-mount') => {

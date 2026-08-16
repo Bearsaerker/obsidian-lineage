@@ -29,7 +29,8 @@ export type ViewStoreAction =
     | ViewHotkeysAction
     | OutlineAction
     | SelectionActions
-    | PersistedStateActions;
+    | PersistedStateActions
+    | SimilarCardsActions;
 
 export type SearchAction =
     | SetSearchQueryAction
@@ -198,3 +199,20 @@ export type PersistedStateActions = {
         collapsedIds: string[];
     };
 };
+
+export type SimilarCardsActions =
+    | {
+          type: 'view/similar-cards/set-results';
+          payload: {
+              nodeIds: string[];
+              scores: Map<string, number>;
+              query: string;
+          };
+      }
+    | {
+          type: 'view/similar-cards/set-loading';
+          payload: { loading: boolean };
+      }
+    | {
+          type: 'view/similar-cards/clear';
+      };
