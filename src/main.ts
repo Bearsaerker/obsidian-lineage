@@ -219,9 +219,50 @@ export default class Lineage extends Plugin {
                 type: 'view/set-active-node/mouse',
                 payload: { id: matches[0] },
             });
+            this.scrollCardIntoView(view, matches[0], D);
         }
         D('returning match count=', matches.length);
         return matches.length;
+    }
+
+    /**
+     * Guaranteed scroll of the card into view. Lineage cards render with an
+     * id equal to the node id, so we can scroll the DOM element directly
+     * (this scrolls every scrollable ancestor) rather than relying solely on
+     * the align-branch effect.
+     */
+    private scrollCardIntoView(
+        view: LineageView,
+        nodeId: string,
+        D?: (msg: string, ...rest: unknown[]) => void,
+    ): void {
+        const container = view.container;
+        const doScroll = (): boolean => {
+            const el = container?.querySelector(
+                `#${CSS.escape(nodeId)}`,
+            ) as HTMLElement | null;
+            if (el) {
+                el.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'nearest',
+                    inline: 'nearest',
+                });
+                D?.('scrolled card into view: ', nodeId);
+                return true;
+            }
+            return false;
+        };
+        if (!doScroll()) {
+            // The card may not be rendered yet (Svelte needs to update after
+            // the reducer state change). Retry a few times.
+            let attempts = 0;
+            const interval = window.setInterval(() => {
+                if (doScroll() || ++attempts > 20) {
+                    window.clearInterval(interval);
+                }
+            }, 150);
+            window.setTimeout(() => window.clearInterval(interval), 3500);
+        }
     }
 
     /**
