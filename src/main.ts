@@ -237,31 +237,56 @@ export default class Lineage extends Plugin {
         D?: (msg: string, ...rest: unknown[]) => void,
     ): void {
         const container = view.container;
+        D?.(
+            'scrollCardIntoView: container=',
+            container ? `${container.tagName}.${container.className}` : 'NULL',
+            'containerEl=',
+            view.containerEl ? `${view.containerEl.tagName}.${view.containerEl.className}` : 'NULL',
+        );
+        const roots: (HTMLElement | null)[] = [
+            container,
+            view.containerEl,
+            document.querySelector('.lineage-view') as HTMLElement | null,
+        ];
         const doScroll = (): boolean => {
-            const el = container?.querySelector(
-                `#${CSS.escape(nodeId)}`,
-            ) as HTMLElement | null;
-            if (el) {
-                el.scrollIntoView({
+            for (const root of roots) {
+                const el = root?.querySelector(
+                    `#${CSS.escape(nodeId)}`,
+                ) as HTMLElement | null;
+                if (el) {
+                    el.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'nearest',
+                        inline: 'nearest',
+                    });
+                    D?.('scrolled card into view: ', nodeId);
+                    return true;
+                }
+            }
+            // Broader fallback: search the entire document.
+            const anyEl = document.getElementById(nodeId) as HTMLElement | null;
+            if (anyEl) {
+                anyEl.scrollIntoView({
                     behavior: 'smooth',
                     block: 'nearest',
                     inline: 'nearest',
                 });
-                D?.('scrolled card into view: ', nodeId);
+                D?.('scrolled card into view (document): ', nodeId);
                 return true;
             }
             return false;
         };
         if (!doScroll()) {
             // The card may not be rendered yet (Svelte needs to update after
-            // the reducer state change). Retry a few times.
+            // the reducer state change, or it is under a collapsed parent that
+            // the reducer is expanding). Retry a few times.
             let attempts = 0;
             const interval = window.setInterval(() => {
-                if (doScroll() || ++attempts > 20) {
+                if (doScroll() || ++attempts > 30) {
                     window.clearInterval(interval);
                 }
             }, 150);
-            window.setTimeout(() => window.clearInterval(interval), 3500);
+            window.setTimeout(() => window.clearInterval(interval), 5000);
         }
     }
 
