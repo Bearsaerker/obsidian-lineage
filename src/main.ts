@@ -150,6 +150,30 @@ export default class Lineage extends Plugin {
             return -1;
         }
 
+        // Diagnostic: how many lineage leaves exist for this file, which one is
+        // active/connected, and whether this view is the visible one.
+        {
+            const allLeaves = this.app.workspace.getLeavesOfType(
+                LINEAGE_VIEW_TYPE,
+            );
+            const forFile = allLeaves.filter(
+                (l) => (l.view as LineageView)?.file?.path === filepath,
+            );
+            const activeLeaf = this.app.workspace.activeLeaf;
+            D('lineage leaves for file=', forFile.length, 'of total=', allLeaves.length);
+            D('this view is activeLeaf=', (view.leaf === activeLeaf), 'leafWin=', (view.leaf as unknown as { window?: Window }).window === window);
+            D('view connected to DOM=', view.containerEl.isConnected,
+                'has .columns-container=', !!view.containerEl.querySelector('.columns-container'),
+                'has .mindmap-container=', !!view.containerEl.querySelector('.mindmap-container'));
+            D('mindmapMode setting=', this.settings.getValue().view.mindmapMode);
+            for (const l of forFile) {
+                const v = l.view as LineageView;
+                D('leaf: isActiveLeaf=', (l === activeLeaf),
+                    'connected=', v.containerEl.isConnected,
+                    'viewId=', v.id);
+            }
+        }
+
         // Ensure the view's leaf is active and focused so align/scroll runs.
         try {
             this.app.workspace.setActiveLeaf(view.leaf, { focus: true });
@@ -236,50 +260,64 @@ export default class Lineage extends Plugin {
         nodeId: string,
         D?: (msg: string, ...rest: unknown[]) => void,
     ): void {
-        const container = view.container;
-        D?.(
-            'scrollCardIntoView: container=',
-            container ? `${container.tagName}.${container.className}` : 'NULL',
-            'containerEl=',
-            view.containerEl ? `${view.containerEl.tagName}.${view.containerEl.className}` : 'NULL',
-        );
         const roots: (HTMLElement | null)[] = [
-            container,
+            view.container,
             view.containerEl,
             document.querySelector('.lineage-view') as HTMLElement | null,
         ];
         const doScroll = (): boolean => {
+            let el: HTMLElement | null = null;
             for (const root of roots) {
-                const el = root?.querySelector(
+                el = root?.querySelector(
                     `#${CSS.escape(nodeId)}`,
                 ) as HTMLElement | null;
-                if (el) {
-                    el.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'nearest',
-                        inline: 'nearest',
-                    });
-                    D?.('scrolled card into view: ', nodeId);
-                    return true;
-                }
+                if (el) break;
             }
-            // Broader fallback: search the entire document.
-            const anyEl = document.getElementById(nodeId) as HTMLElement | null;
-            if (anyEl) {
-                anyEl.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'nearest',
-                    inline: 'nearest',
-                });
-                D?.('scrolled card into view (document): ', nodeId);
+            if (!el) {
+                el = document.getElementById(nodeId) as HTMLElement | null;
+            }
+            if (!el) {
+                D?.(
+                    'scrollCardIntoView: element NOT FOUND (attempt) container=',
+                    view.container ? 'set' : 'NULL',
+                    'containerEl.children=',
+                    view.containerEl?.children.length ?? -1,
+                );
+                return false;
+            }
+
+            // In mindmap mode cards are positioned with transform: translate()
+            // inside an overflow:auto container, so scrollIntoView (which uses
+            // the untransformed layout position) does nothing. Center the card
+            // in the .mindmap-container by scrolling to its transformed
+            // bounding-box position instead.
+            const mindmap = el.closest('.mindmap-container');
+            if (mindmap) {
+                const cardRect = el.getBoundingClientRect();
+                const contRect = mindmap.getBoundingClientRect();
+                mindmap.scrollLeft +=
+                    cardRect.left -
+                    contRect.left -
+                    (contRect.width - cardRect.width) / 2;
+                mindmap.scrollTop +=
+                    cardRect.top -
+                    contRect.top -
+                    (contRect.height - cardRect.height) / 2;
+                D?.('centered card in mindmap container: ', nodeId);
                 return true;
             }
-            return false;
+
+            el.scrollIntoView({
+                behavior: 'smooth',
+                block: 'nearest',
+                inline: 'nearest',
+            });
+            D?.('scrolled card into view: ', nodeId);
+            return true;
         };
         if (!doScroll()) {
             // The card may not be rendered yet (Svelte needs to update after
-            // the reducer state change, or it is under a collapsed parent that
-            // the reducer is expanding). Retry a few times.
+            // the reducer state change). Retry a few times.
             let attempts = 0;
             const interval = window.setInterval(() => {
                 if (doScroll() || ++attempts > 30) {
