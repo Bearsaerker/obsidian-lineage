@@ -283,6 +283,7 @@ export const lang = {
     // pin sections
     cm_unpin_from_left_sidebar: 'Unpin from left sidebar',
     cm_pin_in_left_sidebar: 'Pin in left sidebar',
+    cm_reveal_in_left_sidebar: 'Reveal in left sidebar',
     cmd_toggle_pin_in_left_sidebar: `Toggle 'pin section in left sidebar'`,
     sidebar_tab_pinned_nodes: 'Pinned sections',
     sidebar_no_pinned_nodes: 'No pinned sections',
