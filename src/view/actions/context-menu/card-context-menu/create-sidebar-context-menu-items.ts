@@ -102,7 +102,7 @@ const createGlobalCategorySubmenu = (
     return items;
 };
 
-const createCategorySubmenu = (
+export const createCategorySubmenu = (
     view: LineageView,
     activeNode: string,
 ): MenuItemObject[] => {
