@@ -109,76 +109,38 @@ export default class Lineage extends Plugin {
      *          Lineage document (or no Lineage view is available).
      */
     async findAndOpenCards(searchText: string, filepath?: string): Promise<number> {
-        const D = (msg: string, ...rest: unknown[]) =>
-            /* eslint-disable-next-line no-console */
-            console.log(`[FindAndOpenCards] ${msg}`, ...rest);
-        D('start search=', JSON.stringify(searchText), 'filepath=', filepath);
-
         if (filepath) {
-            D('isLineageDocument=', this.isLineageDocument(filepath));
             if (!this.isLineageDocument(filepath)) {
-                D('NOT a lineage document, returning -1');
                 return -1;
             }
             const file = this.app.vault.getAbstractFileByPath(filepath);
             if (!(file instanceof TFile)) {
-                D('file not found in vault, returning -1');
                 return -1;
             }
 
             const existingLeaf = getLeafOfFile(this, file, LINEAGE_VIEW_TYPE);
-            D('existingLineageLeaf=', existingLeaf ? 'YES' : 'NO');
             if (!existingLeaf) {
                 const markdownLeaf = getLeafOfFile(this, file, 'markdown');
-                D('existingMarkdownLeaf=', markdownLeaf ? 'YES' : 'NO');
                 if (markdownLeaf) {
                     // Convert the markdown leaf into a Lineage view.
-                    D('converting markdown leaf -> lineage');
                     toggleObsidianViewType(this, markdownLeaf, 'lineage');
                 } else {
-                    D('opening new tab + converting -> lineage');
                     const leaf = await openFile(this, file, 'tab');
                     toggleObsidianViewType(this, leaf, 'lineage');
                 }
             }
         }
 
-        const view = await this.waitForLineageView(filepath, D);
-        D('view after wait =', view ? `${view.file?.path} contentKeys=${Object.keys(view.documentStore.getValue().document.content).length}` : 'null');
+        const view = await this.waitForLineageView(filepath);
         if (!view) {
-            D('no lineage view available, returning -1');
             return -1;
-        }
-
-        // Diagnostic: how many lineage leaves exist for this file, which one is
-        // active/connected, and whether this view is the visible one.
-        {
-            const allLeaves = this.app.workspace.getLeavesOfType(
-                LINEAGE_VIEW_TYPE,
-            );
-            const forFile = allLeaves.filter(
-                (l) => (l.view as LineageView)?.file?.path === filepath,
-            );
-            const activeLeaf = this.app.workspace.activeLeaf;
-            D('lineage leaves for file=', forFile.length, 'of total=', allLeaves.length);
-            D('this view is activeLeaf=', (view.leaf === activeLeaf), 'leafWin=', (view.leaf as unknown as { window?: Window }).window === window);
-            D('view connected to DOM=', view.containerEl.isConnected,
-                'has .columns-container=', !!view.containerEl.querySelector('.columns-container'),
-                'has .mindmap-container=', !!view.containerEl.querySelector('.mindmap-container'));
-            D('mindmapMode setting=', this.settings.getValue().view.mindmapMode);
-            for (const l of forFile) {
-                const v = l.view as LineageView;
-                D('leaf: isActiveLeaf=', (l === activeLeaf),
-                    'connected=', v.containerEl.isConnected,
-                    'viewId=', v.id);
-            }
         }
 
         // Ensure the view's leaf is active and focused so align/scroll runs.
         try {
             this.app.workspace.setActiveLeaf(view.leaf, { focus: true });
         } catch (e) {
-            D('setActiveLeaf failed', e);
+            // ignore: the leaf may already be detached
         }
 
         // When the file is freshly opened, the view's mount align
@@ -188,21 +150,10 @@ export default class Lineage extends Plugin {
         // while the mount is still running). Wait for the mount scroll to
         // finish before navigating.
         await delay(500);
-        D('waited 500ms for mount scroll to settle');
 
         const rawQuery = String(searchText ?? '');
         const query = this.normalizeSearchQuery(rawQuery);
-        D('query normalized: from=', JSON.stringify(rawQuery), 'to=', JSON.stringify(query));
         if (query.length === 0) return 0;
-
-        // Sample the content we are matching against.
-        const content = view.documentStore.getValue().document.content;
-        const contentKeys = Object.keys(content);
-        D('contentKeys=', contentKeys.length, 'sampleFirst3=', contentKeys.slice(0, 3));
-        D('content snippets=', contentKeys.slice(0, 5).map((k) => ({
-            id: k,
-            content: (content[k]?.content ?? '').slice(0, 80),
-        })));
 
         // Dispatch through Lineage's own search action so matching cards get
         // highlighted and the first match activated (same as the built-in box).
@@ -211,12 +162,7 @@ export default class Lineage extends Plugin {
             payload: { query },
         });
         const fuseCount = view.viewStore.getValue().search.results.size;
-        D('fuseCount after set-query dispatch =', fuseCount);
         if (fuseCount > 0) {
-            const ids = Array.from(
-                view.viewStore.getValue().search.results.keys(),
-            );
-            D('fuse matched nodeIds=', ids);
             return fuseCount;
         }
 
@@ -225,7 +171,6 @@ export default class Lineage extends Plugin {
         // group.svelte), which would keep the target card hidden even after we
         // navigate to it. Clear the query to reveal every card before we find
         // and navigate to the match ourselves.
-        D('clearing search query to reveal cards');
         view.viewStore.dispatch({
             type: 'view/search/set-query',
             payload: { query: '' },
@@ -234,11 +179,7 @@ export default class Lineage extends Plugin {
         // The Fuse search uses exact whole-query matching by default (threshold
         // 0) and can miss chunk text that differs in casing, whitespace or
         // formatting. Fall back to a tolerant scan over the raw card content.
-        const matches = this.findMatchingLineageNodeIds(view, query, D);
-        D('fallback matches=', matches, matches.map((m) => ({
-            id: m,
-            snippet: (content[m]?.content ?? '').slice(0, 80),
-        })));
+        const matches = this.findMatchingLineageNodeIds(view, query);
         if (matches.length > 0) {
             // `openmode: 'window'` opens the file in a new window, which creates a
             // DUPLICATE Lineage leaf for the same file. `getActiveViewOfType` (used
@@ -253,34 +194,8 @@ export default class Lineage extends Plugin {
             const forFile = allLeaves.filter(
                 (l) => (l.view as LineageView)?.file?.path === filepath,
             );
-            const activeLeaf = this.app.workspace.activeLeaf;
-            let navigated = 0;
             for (const leaf of forFile) {
                 const v = leaf.view as LineageView;
-                // NOTE: do NOT gate navigation on a synchronous hasCard check.
-                // The card element may not be in the DOM yet (Svelte renders
-                // node IDs asynchronously, ~300ms after the document loads), so a
-                // synchronous check would skip every leaf. Instead we navigate
-                // every leaf and let scrollCardIntoView's retry wait for the card.
-                const hasCardNow = this.findCardElement(v, matches[0]) !== null;
-                const rendered =
-                    ((v as unknown as { contentEl?: HTMLElement }).contentEl
-                        ?.children.length ??
-                        0) >
-                    0 ||
-                    !!v.containerEl.querySelector(
-                        '.columns-container, .mindmap-container',
-                    );
-                D(
-                    'leaf',
-                    v.id,
-                    'isActiveLeaf=',
-                    leaf === activeLeaf,
-                    'hasCardNow=',
-                    hasCardNow,
-                    'rendered=',
-                    rendered,
-                );
                 // Clear any active search filter on THIS view so all cards are
                 // revealed (an active query with empty results hides every card).
                 v.viewStore.dispatch({
@@ -294,17 +209,13 @@ export default class Lineage extends Plugin {
                 // matched against - otherwise updateActiveBranch throws
                 // "could not find group for node".
                 v.viewStore.setContext(v.documentStore.getValue().document);
-                D('dispatching set-active-node/mouse to id=', matches[0], 'on leaf', v.id);
                 v.viewStore.dispatch({
                     type: 'view/set-active-node/mouse',
                     payload: { id: matches[0] },
                 });
-                this.scrollCardIntoView(v, matches[0], D);
-                navigated++;
+                this.scrollCardIntoView(v, matches[0]);
             }
-            D('navigated leaves=', navigated);
         }
-        D('returning match count=', matches.length);
         return matches.length;
     }
 
@@ -314,22 +225,10 @@ export default class Lineage extends Plugin {
      * (this scrolls every scrollable ancestor) rather than relying solely on
      * the align-branch effect.
      */
-    private scrollCardIntoView(
-        view: LineageView,
-        nodeId: string,
-        D?: (msg: string, ...rest: unknown[]) => void,
-    ): void {
+    private scrollCardIntoView(view: LineageView, nodeId: string): void {
         const tryScroll = (): boolean => {
             const el = this.findCardElement(view, nodeId);
             if (!el) {
-                D?.(
-                    'scrollCardIntoView: element NOT FOUND',
-                    'containerEl.children=',
-                    view.containerEl?.children.length ?? -1,
-                    'contentEl.children=',
-                    (view as unknown as { contentEl?: HTMLElement }).contentEl
-                        ?.children.length ?? -1,
-                );
                 return false;
             }
             // The card is in the DOM, but its window may not be focused yet.
@@ -339,12 +238,9 @@ export default class Lineage extends Plugin {
             // So wait until the card's own window is focused before scrolling.
             const focused = el.ownerDocument.hasFocus();
             if (!focused) {
-                D?.(
-                    'scrollCardIntoView: card found but its window is not focused yet, waiting',
-                );
                 return false;
             }
-            this.performScroll(view, el, nodeId, D);
+            this.performScroll(view, el);
             return true;
         };
         if (!tryScroll()) {
@@ -365,12 +261,7 @@ export default class Lineage extends Plugin {
      * Actually scrolls the card element into view. Must only be called once the
      * card is in the DOM AND its window is focused (see scrollCardIntoView).
      */
-    private performScroll(
-        view: LineageView,
-        el: HTMLElement,
-        nodeId: string,
-        D?: (msg: string, ...rest: unknown[]) => void,
-    ): void {
+    private performScroll(view: LineageView, el: HTMLElement): void {
         // Scroll every scrollable ancestor so the card is centered.
         //
         // IMPORTANT 1: the card (and its scroll containers) may live in a
@@ -388,8 +279,6 @@ export default class Lineage extends Plugin {
         const elWin = elDoc.defaultView as Window;
         const zoom = view.plugin.settings.getValue().view.zoomLevel || 1;
         const cardRectBefore = el.getBoundingClientRect();
-        let scrollableCount = 0;
-        const scrolled: { cls: string; dTop: number; dLeft: number }[] = [];
         let node: HTMLElement | null = el.parentElement;
         while (node && node !== elDoc.body) {
             const style = elWin.getComputedStyle(node);
@@ -403,61 +292,28 @@ export default class Lineage extends Plugin {
                 node.scrollWidth > node.clientWidth + 1;
             if (scrollable || scrollableX) {
                 const contRect = node.getBoundingClientRect();
-                let dTop = 0;
-                let dLeft = 0;
                 if (scrollable) {
-                    dTop = Math.round(
+                    node.scrollTop += Math.round(
                         (cardRectBefore.top -
                             contRect.top -
                             (contRect.height - cardRectBefore.height) / 2) /
                             zoom,
                     );
-                    node.scrollTop += dTop;
                 }
                 if (scrollableX) {
-                    dLeft = Math.round(
+                    node.scrollLeft += Math.round(
                         (cardRectBefore.left -
                             contRect.left -
                             (contRect.width - cardRectBefore.width) / 2) /
                             zoom,
                     );
-                    node.scrollLeft += dLeft;
                 }
-                scrollableCount++;
-                scrolled.push({
-                    cls: node.className?.toString().slice(0, 40) ?? node.tagName,
-                    dTop,
-                    dLeft,
-                });
             }
             node = node.parentElement;
         }
-        const cardRectAfter = el.getBoundingClientRect();
-        D?.(
-            'manual scroll: card=',
-            nodeId,
-            'zoom=',
-            zoom,
-            'scrollableAncestors=',
-            scrollableCount,
-            'scrolled=',
-            scrolled,
-            'cardTopBefore=',
-            Math.round(cardRectBefore.top),
-            'cardTopAfter=',
-            Math.round(cardRectAfter.top),
-            'cardInCurrentWindow=',
-            elDoc === window.document,
-            'inColumns=',
-            !!el.closest('.columns-container'),
-        );
         // Re-trigger Lineage's own align (centers the active node using its own
         // zoom-aware logic) as a backup / to also scroll sibling columns.
-        try {
-            view.alignBranch.align({ type: 'view/align-branch/center-node' });
-        } catch (e) {
-            D?.('align re-trigger failed', e);
-        }
+        view.alignBranch.align({ type: 'view/align-branch/center-node' });
     }
 
     /**
@@ -522,7 +378,6 @@ export default class Lineage extends Plugin {
     private findMatchingLineageNodeIds(
         view: LineageView,
         query: string,
-        D?: (msg: string, ...rest: unknown[]) => void,
     ): string[] {
         const documentState = view.documentStore.getValue();
         const validIds = new Set<string>();
@@ -531,16 +386,9 @@ export default class Lineage extends Plugin {
                 for (const nodeId of group.nodes) validIds.add(nodeId);
             }
         }
-        D?.(
-            'fallback: contentKeys=',
-            Object.keys(documentState.document.content).length,
-            'treeNodeCount=',
-            validIds.size,
-        );
 
         const content = documentState.document.content;
         const normalizedQuery = this.normalizeSearchQuery(query).toLowerCase();
-        D?.('fallback: normalizedQuery=', JSON.stringify(normalizedQuery));
         const wholePhraseMatches: string[] = [];
         for (const nodeId of validIds) {
             const cardContent = this.normalizeSearchQuery(
@@ -550,13 +398,11 @@ export default class Lineage extends Plugin {
                 wholePhraseMatches.push(nodeId);
             }
         }
-        D?.('fallback wholePhraseMatches=', wholePhraseMatches);
         if (wholePhraseMatches.length > 0) return wholePhraseMatches;
 
         const tokens = normalizedQuery
             .split(' ')
             .filter((t) => t.length >= 3);
-        D?.('fallback tokens=', tokens);
         if (tokens.length === 0) return [];
 
         const scored: { id: string; score: number }[] = [];
@@ -570,12 +416,10 @@ export default class Lineage extends Plugin {
             }
             if (score > 0) scored.push({ id: nodeId, score });
         }
-        D?.('fallback scored=', scored);
         if (scored.length === 0) return [];
         scored.sort((a, b) => b.score - a.score);
         const topScore = scored[0].score;
         const top = scored.filter((s) => s.score === topScore).map((s) => s.id);
-        D?.('fallback topScore=', topScore, 'topIds=', top);
         return top;
     }
 
@@ -585,7 +429,6 @@ export default class Lineage extends Plugin {
      */
     private async waitForLineageView(
         filepath?: string,
-        D?: (msg: string, ...rest: unknown[]) => void,
     ): Promise<LineageView | null> {
         const deadline = Date.now() + 3000;
         let view = this.app.workspace.getActiveViewOfType(LineageView);
@@ -597,12 +440,10 @@ export default class Lineage extends Plugin {
                     Object.keys(view.documentStore.getValue().document.content)
                         .length > 0;
                 const hasContainer = !!view.container;
-                D?.(`waitForLineageView poll: path=${view.file.path} matchesPath=${matchesPath} hasContent=${hasContent} hasContainer=${hasContainer}`);
                 if (matchesPath && hasContent && hasContainer) return view;
             }
             await delay(25);
         }
-        D?.('waitForLineageView TIMEOUT (3s)');
         return view;
     }
 
