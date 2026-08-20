@@ -330,20 +330,26 @@ export default class Lineage extends Plugin {
                 return false;
             }
 
-            // Scroll every scrollable ancestor so the card is centered. Using
-            // getBoundingClientRect (which is already transform/zoom-corrected)
-            // is far more reliable than scrollIntoView, which miscalculates
-            // when Lineage applies transform: scale() zoom to .columns.
+            // Scroll every scrollable ancestor so the card is centered.
             //
-            // IMPORTANT: the card (and its scroll containers) may live in a
+            // IMPORTANT 1: the card (and its scroll containers) may live in a
             // DIFFERENT window than the one this code runs in (openmode=window
             // opens a popout). So every DOM API here must use the element's OWN
             // window/document, not the current window's.
+            //
+            // IMPORTANT 2: Lineage applies transform: scale(zoom) to .columns.
+            // getBoundingClientRect returns SCREEN pixels (post-transform), but
+            // scrollTop is in LAYOUT pixels. So the scroll delta must be divided
+            // by the zoom level (exactly what Lineage's own alignVertically does:
+            // column.scrollBy({ top: (scrollTop * -1) / zoomLevel })). Without
+            // this, the scroll lands in the wrong place whenever zoom != 1.
             const elDoc = el.ownerDocument;
             const elWin = elDoc.defaultView as Window;
-            const cardRect = el.getBoundingClientRect();
+            const zoom =
+                view.plugin.settings.getValue().view.zoomLevel || 1;
+            const cardRectBefore = el.getBoundingClientRect();
             let scrollableCount = 0;
-            const scrolledClasses: string[] = [];
+            const scrolled: { cls: string; dTop: number; dLeft: number }[] = [];
             let node: HTMLElement | null = el.parentElement;
             while (node && node !== elDoc.body) {
                 const style = elWin.getComputedStyle(node);
@@ -357,64 +363,63 @@ export default class Lineage extends Plugin {
                     node.scrollWidth > node.clientWidth + 1;
                 if (scrollable || scrollableX) {
                     const contRect = node.getBoundingClientRect();
+                    let dTop = 0;
+                    let dLeft = 0;
                     if (scrollable) {
-                        node.scrollTop += Math.round(
-                            cardRect.top -
+                        dTop = Math.round(
+                            (cardRectBefore.top -
                                 contRect.top -
-                                (contRect.height - cardRect.height) / 2,
+                                (contRect.height - cardRectBefore.height) / 2) /
+                                zoom,
                         );
+                        node.scrollTop += dTop;
                     }
                     if (scrollableX) {
-                        node.scrollLeft += Math.round(
-                            cardRect.left -
+                        dLeft = Math.round(
+                            (cardRectBefore.left -
                                 contRect.left -
-                                (contRect.width - cardRect.width) / 2,
+                                (contRect.width - cardRectBefore.width) / 2) /
+                                zoom,
                         );
+                        node.scrollLeft += dLeft;
                     }
                     scrollableCount++;
-                    scrolledClasses.push(node.className?.toString().slice(0, 60) ?? node.tagName);
+                    scrolled.push({
+                        cls: node.className?.toString().slice(0, 40) ?? node.tagName,
+                        dTop,
+                        dLeft,
+                    });
                 }
                 node = node.parentElement;
             }
-            // Decisive diagnostics: where does the card actually live?
-            let parentChain = '';
-            let p: HTMLElement | null = el;
-            for (let i = 0; i < 6 && p; i++) {
-                parentChain +=
-                    `${p.tagName}.${(p.className?.toString() ?? '').slice(0, 40)}|`;
-                p = p.parentElement;
-            }
+            const cardRectAfter = el.getBoundingClientRect();
             D?.(
                 'manual scroll: card=',
                 nodeId,
+                'zoom=',
+                zoom,
                 'scrollableAncestors=',
                 scrollableCount,
-                'scrolledClasses=',
-                scrolledClasses,
+                'scrolled=',
+                scrolled,
+                'cardTopBefore=',
+                Math.round(cardRectBefore.top),
+                'cardTopAfter=',
+                Math.round(cardRectAfter.top),
                 'cardInCurrentWindow=',
                 elDoc === window.document,
-                'cardInContainerEl=',
-                view.containerEl?.contains(el) ?? false,
                 'containerElInCurrentWindow=',
                 view.containerEl?.ownerDocument === window.document,
-                'leafWin===window=',
-                (view.leaf as unknown as { window?: Window }).window === window,
                 'inColumns=',
                 !!el.closest('.columns-container'),
-                'inMindmap=',
-                !!el.closest('.mindmap-container'),
-                'parentChain=',
-                parentChain,
-                'cardRect=',
-                cardRect.toJSON(),
             );
-            // Fall back to scrollIntoView as well (handles any container we may
-            // have missed, e.g. a transformed wrapper).
-            el.scrollIntoView({
-                behavior: 'smooth',
-                block: 'nearest',
-                inline: 'nearest',
-            });
+            // Re-trigger Lineage's own align (centers the active node using its
+            // own zoom-aware logic) as a backup / to also scroll sibling columns.
+            try {
+                view.alignBranch.align({ type: 'view/align-branch/center-node' });
+            } catch (e) {
+                D?.('align re-trigger failed', e);
+            }
             return true;
         };
         if (!doScroll()) {
