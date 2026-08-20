@@ -35,6 +35,13 @@
         virtualView as unknown as LineageView,
     );
 
+    // Reuse the shared view store's search state to filter the rendered cards
+    // (same semantics as the main lineage view: no query → all; showAllNodes
+    // → all; otherwise only nodes that are in the search results).
+    $: searchQuery = $viewStore.search.query;
+    $: searchShowAllNodes = $viewStore.search.showAllNodes;
+    $: searchResults = $viewStore.search.results;
+
     $: resolved = cards
         .map((c) => ({
             ...c,
@@ -45,6 +52,12 @@
         }))
         .filter((c): c is ResolvedGlobalCard & { nodeId: string } =>
             Boolean(c.nodeId),
+        )
+        .filter(
+            (c) =>
+                !searchQuery ||
+                searchShowAllNodes ||
+                searchResults.has(c.nodeId),
         );
 
     // Keep the global keyboard navigation list in sync with this file group

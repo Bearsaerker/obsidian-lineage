@@ -6,6 +6,7 @@ import {
     globalVirtualViewsStore,
     registerVirtualView,
     routeGlobalCommand,
+    jumpToSearchResult,
 } from 'src/view/components/global-categories/helpers/global-view-keyboard';
 import { ViewStore } from 'src/view/view';
 import type { VirtualLineageView } from 'src/view/components/global-categories/helpers/create-virtual-view';
@@ -23,6 +24,14 @@ type FakeState = {
     document: {
         editing: FakeEditing;
     };
+    search: {
+        query: string;
+        results: Map<string, unknown>;
+        fuzzySearch: boolean;
+        showInput: boolean;
+        showAllNodes: boolean;
+        searching: boolean;
+    };
 };
 
 const makeViewStore = () => {
@@ -31,6 +40,14 @@ const makeViewStore = () => {
         recentNodes: { activeNode: '' },
         document: {
             editing: { activeNodeId: '', isInSidebar: false },
+        },
+        search: {
+            query: '',
+            results: new Map(),
+            fuzzySearch: false,
+            showInput: false,
+            showAllNodes: true,
+            searching: false,
         },
     };
     const store = {
@@ -296,5 +313,58 @@ describe('global view keyboard navigation', () => {
         fake.pinnedNodes.activeNode = '';
         fake.recentNodes.activeNode = '';
         expect(getActiveGlobalCardContext()).toBeNull();
+    });
+
+    it('jumps to the next/previous search result (wrapping)', async () => {
+        globalCardListStore.set([
+            { filePath: 'a.md', nodeId: 'n1', section: '1', categoryId: 'c1' },
+            { filePath: 'a.md', nodeId: 'n2', section: '2', categoryId: 'c1' },
+            { filePath: 'b.md', nodeId: 'n3', section: '1', categoryId: 'c1' },
+        ]);
+        const real = viewStore.getValue() as unknown as FakeState;
+        real.search.query = 'x';
+        real.search.results = new Map([
+            ['n1', {}],
+            ['n3', {}],
+        ]);
+        // container returns the card element so scrolling does not poll
+        const scrollable = {
+            querySelector: (sel: string) => {
+                const id = /\[id="?([^"]+?)"?\]/.exec(sel)?.[1];
+                return id === 'n1' || id === 'n3' ? {} : null;
+            },
+        } as unknown as HTMLElement;
+
+        // no active match yet → next lands on the first match
+        await jumpToSearchResult(viewStore, scrollable, 1);
+        expect(getActive(viewStore)).toBe('n1');
+        // next again → n3
+        await jumpToSearchResult(viewStore, scrollable, 1);
+        expect(getActive(viewStore)).toBe('n3');
+        // next wraps back to n1
+        await jumpToSearchResult(viewStore, scrollable, 1);
+        expect(getActive(viewStore)).toBe('n1');
+        // previous from n1 wraps to n3
+        await jumpToSearchResult(viewStore, scrollable, -1);
+        expect(getActive(viewStore)).toBe('n3');
+    });
+
+    it('jumpToSearchResult is a no-op without an active query or matches', async () => {
+        globalCardListStore.set([
+            { filePath: 'a.md', nodeId: 'n1', section: '1', categoryId: 'c1' },
+        ]);
+        const scrollable = {
+            querySelector: () => null,
+        } as unknown as HTMLElement;
+        const real = viewStore.getValue() as unknown as FakeState;
+        real.search.query = '';
+        real.search.results = new Map();
+        await jumpToSearchResult(viewStore, scrollable, 1);
+        expect(getActive(viewStore)).toBe('');
+
+        real.search.query = 'x';
+        real.search.results = new Map([['does-not-exist', {}]]);
+        await jumpToSearchResult(viewStore, scrollable, 1);
+        expect(getActive(viewStore)).toBe('');
     });
 });

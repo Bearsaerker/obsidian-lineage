@@ -334,6 +334,8 @@ export const lang = {
     global_categories_search_category: 'Search categories…',
     global_categories_no_matches: 'No matches',
     global_categories_manage_tree: 'Manage tree',
+    global_categories_search_cards: 'Search cards…',
+    global_categories_search_no_results: 'No cards match your search.',
     modal_new_folder_placeholder: 'Enter folder name...',
     modal_rename_placeholder: 'Enter new name...',
 

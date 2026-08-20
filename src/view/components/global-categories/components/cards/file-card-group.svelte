@@ -16,6 +16,7 @@
         registerVirtualView,
         unregisterVirtualView,
     } from '../../helpers/global-view-keyboard';
+    import { updateGlobalSearchResults } from '../../helpers/global-document-search';
 
     export let plugin: Lineage;
     export let filePath: string;
@@ -67,6 +68,12 @@
             virtualView.setContainer(containerEl);
             registerVirtualView(filePath, virtualView);
             ready = true;
+            // If a search is already active, include this newly mounted file's
+            // cards in the current results (one recompute, not wired to list
+            // changes, so it cannot loop).
+            if (viewStore.getValue().search.query) {
+                updateGlobalSearchResults(viewStore);
+            }
         } catch (e) {
             failed = true;
         }

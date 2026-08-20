@@ -63,6 +63,11 @@
         );
     };
 
+    // Visible (post-search-filter) card count comes from the keyboard nav
+    // list, which the file groups rebuild from their filtered cards.
+    $: visibleCount = $globalCardListStore.length;
+    $: searchActive = Boolean($viewStore.search.query);
+
     $: grouped = (() => {
         const map = new Map<string, ResolvedGlobalCard[]>();
         for (const card of cards) {
@@ -80,6 +85,10 @@
 <div class="gc-cards" bind:this={listEl}>
     {#if cards.length === 0}
         <div class="gc-cards__empty">{lang.global_categories_empty_cards}</div>
+    {:else if searchActive && visibleCount === 0}
+        <div class="gc-cards__empty">
+            {lang.global_categories_search_no_results}
+        </div>
     {:else}
         {#each grouped as group (group.filePath)}
             <FileCardGroup

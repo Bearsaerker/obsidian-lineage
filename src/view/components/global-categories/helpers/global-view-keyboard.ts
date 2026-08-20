@@ -5,6 +5,7 @@ import { saveNodeContent } from 'src/view/actions/keyboard-shortcuts/helpers/com
 import { cancelChanges } from 'src/view/actions/keyboard-shortcuts/helpers/commands/commands/helpers/cancel-changes';
 import type { LineageView } from 'src/view/view';
 import { moveCardInCategory } from './move-card-in-category';
+import { delay } from 'src/helpers/delay';
 
 export type GlobalCardNavItem = {
     filePath: string;
@@ -70,6 +71,85 @@ const scrollToCard = (container: HTMLElement, nodeId: string) => {
     const el = container.querySelector(`[id="${nodeId}"]`);
     // optional call: jsdom/test environments don't implement scrollIntoView
     el?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+};
+
+/**
+ * Scroll to a card once it is actually present in the DOM (polls). Handles
+ * the async re-render timing of the filtered card list.
+ */
+const scrollToCardAfterMount = async (
+    container: HTMLElement,
+    nodeId: string,
+) => {
+    const deadline = Date.now() + 2000;
+    while (Date.now() < deadline) {
+        const el = container.querySelector(`[id="${nodeId}"]`);
+        if (el) {
+            el.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+        await delay(30);
+    }
+};
+
+/**
+ * Activate + scroll to the first card matching the active search, if any.
+ */
+export const scrollToFirstSearchResult = async (
+    viewStore: ViewStore,
+    container: HTMLElement,
+) => {
+    const state = viewStore.getValue();
+    const results = state.search.results;
+    if (!state.search.query || results.size === 0) return;
+
+    // The first visible card is the first nav list item whose nodeId is a
+    // search match (the nav list is rebuilt from the filtered render list).
+    const items = get(globalCardListStore);
+    const firstMatch = items.find((i) => results.has(i.nodeId));
+    const nodeId = firstMatch?.nodeId ?? Array.from(results.keys())[0];
+    if (!nodeId) return;
+
+    const activeId =
+        state.pinnedNodes.activeNode || state.recentNodes.activeNode;
+    if (activeId !== nodeId) {
+        setActiveGlobalCard(viewStore, nodeId);
+    }
+
+    await scrollToCardAfterMount(container, nodeId);
+};
+
+/**
+ * Move to the next/previous card that matches the active search (wrapping),
+ * activate it and scroll it into view. No-op if search is inactive or no
+ * matches are visible.
+ */
+export const jumpToSearchResult = async (
+    viewStore: ViewStore,
+    container: HTMLElement,
+    direction: 1 | -1,
+) => {
+    const state = viewStore.getValue();
+    if (!state.search.query || state.search.results.size === 0) return;
+
+    const items = get(globalCardListStore);
+    const matches = items
+        .map((i) => i.nodeId)
+        .filter((id) => state.search.results.has(id));
+    if (matches.length === 0) return;
+
+    const activeId =
+        state.pinnedNodes.activeNode || state.recentNodes.activeNode;
+    let currentIndex = matches.indexOf(activeId);
+    // no active match yet → start at the first (or the last when going back)
+    if (currentIndex === -1) {
+        currentIndex = direction === 1 ? -1 : 0;
+    }
+    const next =
+        matches[(currentIndex + direction + matches.length) % matches.length];
+
+    setActiveGlobalCard(viewStore, next);
+    await scrollToCardAfterMount(container, next);
 };
 
 const getActiveIndex = (
@@ -351,6 +431,12 @@ export const routeGlobalCommand = (
                 context.card,
                 name === 'move_node_up' ? -1 : 1,
             );
+            break;
+        }
+        case 'toggle_search_input': {
+            // reuse the main view's search toggle (default '/' and Alt+F)
+            event.preventDefault();
+            ctx.viewStore.dispatch({ type: 'view/search/toggle-input' });
             break;
         }
     }

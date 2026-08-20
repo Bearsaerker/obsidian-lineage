@@ -1,5 +1,6 @@
 <script lang="ts">
     import Lineage from 'src/main';
+    import { ChevronDown, ChevronUp } from 'lucide-svelte';
     import { onDestroy, onMount } from 'svelte';
     import GlobalCategoriesTree from './components/tree/global-categories-tree.svelte';
     import GlobalCategoryCards from './components/cards/global-category-cards.svelte';
@@ -27,6 +28,12 @@
         globalViewStore,
     } from './helpers/global-view-keyboard';
     import { globalViewHotkeysAction } from './helpers/global-view-hotkeys-action';
+    import {
+        scrollToFirstSearchResult,
+        jumpToSearchResult,
+    } from './helpers/global-view-keyboard';
+    import { updateGlobalSearchResults } from './helpers/global-document-search';
+    import GlobalSearchInput from './components/selectors/gc-search-input.svelte';
 
     export let plugin: Lineage;
     export let leaf: WorkspaceLeaf;
@@ -85,9 +92,64 @@
     const unsubscribeSettings = plugin.settings.subscribe((state) => {
         categories = state.categories;
     });
+
+    // Reuse the main view's search: recompute results across the currently
+    // mounted files when the query or fuzzy mode changes. NOTE: this must NOT
+    // also recompute on card-list changes — dispatching `set-results` (a new
+    // Map) would feed back into the card list's reactive rebuild →
+    // `globalCardListStore.set` → recompute → ... an infinite loop that
+    // crashes Obsidian.
+    let lastQuery = '';
+    let lastFuzzy = false;
+    // Debounce the (potentially expensive) cross-file search until the user
+    // has paused typing, so keystrokes stay smooth.
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    let lastScheduledQuery: string | null = null;
+    const clearSearchTimer = () => {
+        if (debounceTimer !== null) {
+            clearTimeout(debounceTimer);
+            debounceTimer = null;
+        }
+    };
+    const unsubscribeViewSearch = viewStore.subscribe((state) => {
+        const queryChanged = state.search.query !== lastQuery;
+        const fuzzyChanged = state.search.fuzzySearch !== lastFuzzy;
+        lastQuery = state.search.query;
+        lastFuzzy = state.search.fuzzySearch;
+        if (!(queryChanged || fuzzyChanged)) return;
+
+        clearSearchTimer();
+        // a cleared query recomputes (empties results) immediately
+        if (!state.search.query) {
+            lastScheduledQuery = null;
+            updateGlobalSearchResults(viewStore);
+            return;
+        }
+        lastScheduledQuery = state.search.query;
+        debounceTimer = setTimeout(() => {
+            debounceTimer = null;
+            if (viewStore.getValue().search.query === lastScheduledQuery) {
+                updateGlobalSearchResults(viewStore);
+                scrollToFirstSearchResult(viewStore, rootEl);
+            }
+        }, 300);
+    });
+    const jump = (direction: 1 | -1) => {
+        // if a search is pending, resolve it first so we jump against the
+        // latest query's results
+        if (debounceTimer !== null) {
+            clearSearchTimer();
+            updateGlobalSearchResults(viewStore);
+        }
+        jumpToSearchResult(viewStore, rootEl, direction);
+    };
+    const jumpNext = () => jump(1);
+    const jumpPrev = () => jump(-1);
     onDestroy(() => {
+        clearSearchTimer();
         unsubscribeView();
         unsubscribeSettings();
+        unsubscribeViewSearch();
         globalCardListStore.set([]);
         globalViewStore.set(null);
     });
@@ -243,6 +305,34 @@
         </div>
     </div>
     <div class="gc-content">
+        {#if $viewStore.search.showInput}
+            <div class="gc-search-bar">
+                <div class="gc-input-fill">
+                    <GlobalSearchInput
+                        {viewStore}
+                        onActivateNext={jump}
+                    />
+                </div>
+                <div class="gc-search-nav">
+                    <button
+                        class="gc-search-nav-btn"
+                        title={lang.tlb_search_previous_result}
+                        aria-label={lang.tlb_search_previous_result}
+                        on:click={jumpPrev}
+                    >
+                        <ChevronUp size={14} />
+                    </button>
+                    <button
+                        class="gc-search-nav-btn"
+                        title={lang.tlb_search_next_result}
+                        aria-label={lang.tlb_search_next_result}
+                        on:click={jumpNext}
+                    >
+                        <ChevronDown size={14} />
+                    </button>
+                </div>
+            </div>
+        {/if}
         <GlobalCategoryCards
             {plugin}
             {categories}
@@ -321,6 +411,50 @@
         flex-direction: column;
         overflow-y: auto;
         padding: 10px;
+    }
+
+    .gc-search-bar {
+        flex: 0 0 auto;
+        padding: 0 0 10px;
+        display: flex;
+        gap: 6px;
+        align-items: center;
+    }
+
+    .gc-search-bar .gc-input-fill {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .gc-search-nav {
+        display: flex;
+        gap: 4px;
+        flex: 0 0 auto;
+    }
+
+    .gc-search-nav-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 4px;
+        border: 1px solid var(--background-modifier-border);
+        background-color: var(--background-secondary);
+        color: var(--text-muted);
+        cursor: pointer;
+        padding: 0;
+    }
+
+    .gc-search-nav-btn:hover {
+        background-color: var(--interactive-hover);
+        border-color: var(--interactive-accent);
+        color: var(--text-normal);
+    }
+
+    .gc-search-nav-btn:disabled {
+        opacity: 0.4;
+        cursor: default;
     }
 
     .gc-content__placeholder {
