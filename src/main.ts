@@ -234,18 +234,46 @@ export default class Lineage extends Plugin {
      * 2. Fallback: score each card by how many of the query's words it contains
      *    and return the best-scoring cards (covers chunks spanning cards).
      */
+    /**
+     * Tolerant search for cards containing `query`, handling the case where the
+     * query is a longer chunk that does not appear verbatim (as a single exact
+     * substring) in any card.
+     *
+     * Only nodes that exist in the live column tree are considered - stale
+     * node IDs left in `document.content` but absent from `columns` are
+     * skipped, because navigating to them makes the reducer throw
+     * "could not find group for node".
+     *
+     * 1. Whole-phrase match (case-insensitive, whitespace-normalized).
+     * 2. Fallback: score each card by how many of the query's words it contains
+     *    and return the best-scoring cards (covers chunks spanning cards).
+     */
     private findMatchingLineageNodeIds(
         view: LineageView,
         query: string,
         D?: (msg: string, ...rest: unknown[]) => void,
     ): string[] {
-        const content = view.documentStore.getValue().document.content;
+        const documentState = view.documentStore.getValue();
+        const validIds = new Set<string>();
+        for (const column of documentState.document.columns) {
+            for (const group of column.groups) {
+                for (const nodeId of group.nodes) validIds.add(nodeId);
+            }
+        }
+        D?.(
+            'fallback: contentKeys=',
+            Object.keys(documentState.document.content).length,
+            'treeNodeCount=',
+            validIds.size,
+        );
+
+        const content = documentState.document.content;
         const normalizedQuery = this.normalizeSearchQuery(query).toLowerCase();
-        D?.('fallback: normalizedQuery=', JSON.stringify(normalizedQuery), 'cardCount=', Object.keys(content).length);
+        D?.('fallback: normalizedQuery=', JSON.stringify(normalizedQuery));
         const wholePhraseMatches: string[] = [];
-        for (const [nodeId, nodeData] of Object.entries(content)) {
+        for (const nodeId of validIds) {
             const cardContent = this.normalizeSearchQuery(
-                nodeData?.content ?? '',
+                content[nodeId]?.content ?? '',
             ).toLowerCase();
             if (cardContent.includes(normalizedQuery)) {
                 wholePhraseMatches.push(nodeId);
@@ -261,9 +289,9 @@ export default class Lineage extends Plugin {
         if (tokens.length === 0) return [];
 
         const scored: { id: string; score: number }[] = [];
-        for (const [nodeId, nodeData] of Object.entries(content)) {
+        for (const nodeId of validIds) {
             const cardContent = this.normalizeSearchQuery(
-                nodeData?.content ?? '',
+                content[nodeId]?.content ?? '',
             ).toLowerCase();
             let score = 0;
             for (const token of tokens) {
