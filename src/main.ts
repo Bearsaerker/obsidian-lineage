@@ -207,6 +207,13 @@ export default class Lineage extends Plugin {
             snippet: (content[m]?.content ?? '').slice(0, 80),
         })));
         if (matches.length > 0) {
+            // The viewStore context (the document the reducer uses to resolve
+            // the active branch) can lag behind the documentStore after a
+            // reload, because node IDs are regenerated. Sync it with the
+            // current document first so navigation uses the same columns we
+            // matched against - otherwise updateActiveBranch throws
+            // "could not find group for node".
+            view.viewStore.setContext(view.documentStore.getValue().document);
             D('dispatching set-active-node/mouse to id=', matches[0]);
             view.viewStore.dispatch({
                 type: 'view/set-active-node/mouse',
