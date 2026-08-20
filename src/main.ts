@@ -181,6 +181,15 @@ export default class Lineage extends Plugin {
             D('setActiveLeaf failed', e);
         }
 
+        // When the file is freshly opened, the view's mount align
+        // (view/life-cycle/mount, priority 100) is a SMOOTH scroll that runs
+        // after our navigation and would override it. It also blocks our
+        // set-active-node align (priority 90 < 100, so the align returns early
+        // while the mount is still running). Wait for the mount scroll to
+        // finish before navigating.
+        await delay(500);
+        D('waited 500ms for mount scroll to settle');
+
         const rawQuery = String(searchText ?? '');
         const query = this.normalizeSearchQuery(rawQuery);
         D('query normalized: from=', JSON.stringify(rawQuery), 'to=', JSON.stringify(query));
@@ -587,8 +596,9 @@ export default class Lineage extends Plugin {
                 const hasContent =
                     Object.keys(view.documentStore.getValue().document.content)
                         .length > 0;
-                D?.(`waitForLineageView poll: path=${view.file.path} matchesPath=${matchesPath} hasContent=${hasContent}`);
-                if (matchesPath && hasContent) return view;
+                const hasContainer = !!view.container;
+                D?.(`waitForLineageView poll: path=${view.file.path} matchesPath=${matchesPath} hasContent=${hasContent} hasContainer=${hasContainer}`);
+                if (matchesPath && hasContent && hasContainer) return view;
             }
             await delay(25);
         }
