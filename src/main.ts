@@ -162,25 +162,36 @@ export default class Lineage extends Plugin {
             payload: { query },
         });
         const fuseCount = view.viewStore.getValue().search.results.size;
+        let targetId: string | undefined;
+        let resultCount = 0;
         if (fuseCount > 0) {
-            return fuseCount;
+            // Fuse matched at least one card. Take the first match as the target
+            // and still navigate + scroll to it (a bare return here leaves the
+            // active node untouched and never scrolls, which is what happened
+            // when the file was already open).
+            targetId = Array.from(
+                view.viewStore.getValue().search.results.keys(),
+            )[0];
+            resultCount = fuseCount;
+        } else {
+            // Fuse found nothing, so a search query is now active with an empty
+            // result set. Lineage's UI filters out ALL cards in that state (see
+            // group.svelte), which would keep the target card hidden even after we
+            // navigate to it. Clear the query to reveal every card before we find
+            // and navigate to the match ourselves.
+            view.viewStore.dispatch({
+                type: 'view/search/set-query',
+                payload: { query: '' },
+            });
+
+            // The Fuse search uses exact whole-query matching by default (threshold
+            // 0) and can miss chunk text that differs in casing, whitespace or
+            // formatting. Fall back to a tolerant scan over the raw card content.
+            const matches = this.findMatchingLineageNodeIds(view, query);
+            targetId = matches[0];
+            resultCount = matches.length;
         }
-
-        // Fuse found nothing, so a search query is now active with an empty
-        // result set. Lineage's UI filters out ALL cards in that state (see
-        // group.svelte), which would keep the target card hidden even after we
-        // navigate to it. Clear the query to reveal every card before we find
-        // and navigate to the match ourselves.
-        view.viewStore.dispatch({
-            type: 'view/search/set-query',
-            payload: { query: '' },
-        });
-
-        // The Fuse search uses exact whole-query matching by default (threshold
-        // 0) and can miss chunk text that differs in casing, whitespace or
-        // formatting. Fall back to a tolerant scan over the raw card content.
-        const matches = this.findMatchingLineageNodeIds(view, query);
-        if (matches.length > 0) {
+        if (targetId) {
             // `openmode: 'window'` opens the file in a new window, which creates a
             // DUPLICATE Lineage leaf for the same file. `getActiveViewOfType` (used
             // by waitForLineageView) returns the globally-active leaf, which may be
@@ -211,12 +222,12 @@ export default class Lineage extends Plugin {
                 v.viewStore.setContext(v.documentStore.getValue().document);
                 v.viewStore.dispatch({
                     type: 'view/set-active-node/mouse',
-                    payload: { id: matches[0] },
+                    payload: { id: targetId },
                 });
-                this.scrollCardIntoView(v, matches[0]);
+                this.scrollCardIntoView(v, targetId);
             }
         }
-        return matches.length;
+        return resultCount;
     }
 
     /**
