@@ -187,6 +187,17 @@ export default class Lineage extends Plugin {
             return fuseCount;
         }
 
+        // Fuse found nothing, so a search query is now active with an empty
+        // result set. Lineage's UI filters out ALL cards in that state (see
+        // group.svelte), which would keep the target card hidden even after we
+        // navigate to it. Clear the query to reveal every card before we find
+        // and navigate to the match ourselves.
+        D('clearing search query to reveal cards');
+        view.viewStore.dispatch({
+            type: 'view/search/set-query',
+            payload: { query: '' },
+        });
+
         // The Fuse search uses exact whole-query matching by default (threshold
         // 0) and can miss chunk text that differs in casing, whitespace or
         // formatting. Fall back to a tolerant scan over the raw card content.
