@@ -130,14 +130,82 @@ export default class Lineage extends Plugin {
         const view = await this.waitForLineageView(filepath);
         if (!view) return -1;
 
-        const query = String(searchText ?? '');
+        const query = this.normalizeSearchQuery(String(searchText ?? ''));
+        if (query.length === 0) return 0;
+
+        // Dispatch through Lineage's own search action so matching cards get
+        // highlighted and the first match activated (same as the built-in box).
         view.viewStore.dispatch({
             type: 'view/search/set-query',
             payload: { query },
         });
-        if (query.length === 0) return 0;
+        const fuseCount = view.viewStore.getValue().search.results.size;
+        if (fuseCount > 0) return fuseCount;
 
-        return view.viewStore.getValue().search.results.size;
+        // The Fuse search uses exact whole-query matching by default (threshold
+        // 0) and can miss chunk text that differs in casing, whitespace or
+        // formatting. Fall back to a tolerant scan over the raw card content.
+        const matches = this.findMatchingLineageNodeIds(view, query);
+        if (matches.length > 0) {
+            view.viewStore.dispatch({
+                type: 'view/set-active-node/mouse',
+                payload: { id: matches[0] },
+            });
+        }
+        return matches.length;
+    }
+
+    /**
+     * Collapses all whitespace to single spaces and trims, so that extra
+     * newlines/indentation in a pasted chunk do not break matching.
+     */
+    private normalizeSearchQuery(query: string): string {
+        return query.replace(/\s+/g, ' ').trim();
+    }
+
+    /**
+     * Tolerant search for cards containing `query`, handling the case where the
+     * query is a longer chunk that does not appear verbatim (as a single exact
+     * substring) in any card.
+     *
+     * 1. Whole-phrase match (case-insensitive, whitespace-normalized).
+     * 2. Fallback: score each card by how many of the query's words it contains
+     *    and return the best-scoring cards (covers chunks spanning cards).
+     */
+    private findMatchingLineageNodeIds(view: LineageView, query: string): string[] {
+        const content = view.documentStore.getValue().document.content;
+        const normalizedQuery = this.normalizeSearchQuery(query).toLowerCase();
+        const wholePhraseMatches: string[] = [];
+        for (const [nodeId, nodeData] of Object.entries(content)) {
+            const cardContent = this.normalizeSearchQuery(
+                nodeData?.content ?? '',
+            ).toLowerCase();
+            if (cardContent.includes(normalizedQuery)) {
+                wholePhraseMatches.push(nodeId);
+            }
+        }
+        if (wholePhraseMatches.length > 0) return wholePhraseMatches;
+
+        const tokens = normalizedQuery
+            .split(' ')
+            .filter((t) => t.length >= 3);
+        if (tokens.length === 0) return [];
+
+        const scored: { id: string; score: number }[] = [];
+        for (const [nodeId, nodeData] of Object.entries(content)) {
+            const cardContent = this.normalizeSearchQuery(
+                nodeData?.content ?? '',
+            ).toLowerCase();
+            let score = 0;
+            for (const token of tokens) {
+                if (cardContent.includes(token)) score++;
+            }
+            if (score > 0) scored.push({ id: nodeId, score });
+        }
+        if (scored.length === 0) return [];
+        scored.sort((a, b) => b.score - a.score);
+        const topScore = scored[0].score;
+        return scored.filter((s) => s.score === topScore).map((s) => s.id);
     }
 
     /**
