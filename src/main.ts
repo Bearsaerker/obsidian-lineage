@@ -317,9 +317,15 @@ export default class Lineage extends Plugin {
                     'scrollCardIntoView: element NOT FOUND',
                     'containerEl.children=',
                     view.containerEl?.children.length ?? -1,
+                    'containerElChildClasses=',
+                    Array.from(view.containerEl?.children ?? []).map(
+                        (c) => (c as HTMLElement).className?.toString().slice(0, 40) ?? c.tagName,
+                    ),
                     'contentEl.children=',
                     (view as unknown as { contentEl?: HTMLElement }).contentEl
                         ?.children.length ?? -1,
+                    'cardInAnyWindow=',
+                    !!view.containerEl?.ownerDocument.getElementById(nodeId),
                 );
                 return false;
             }
@@ -328,11 +334,19 @@ export default class Lineage extends Plugin {
             // getBoundingClientRect (which is already transform/zoom-corrected)
             // is far more reliable than scrollIntoView, which miscalculates
             // when Lineage applies transform: scale() zoom to .columns.
+            //
+            // IMPORTANT: the card (and its scroll containers) may live in a
+            // DIFFERENT window than the one this code runs in (openmode=window
+            // opens a popout). So every DOM API here must use the element's OWN
+            // window/document, not the current window's.
+            const elDoc = el.ownerDocument;
+            const elWin = elDoc.defaultView as Window;
             const cardRect = el.getBoundingClientRect();
             let scrollableCount = 0;
+            const scrolledClasses: string[] = [];
             let node: HTMLElement | null = el.parentElement;
-            while (node && node !== document.body) {
-                const style = window.getComputedStyle(node);
+            while (node && node !== elDoc.body) {
+                const style = elWin.getComputedStyle(node);
                 const overflowY = style.overflowY;
                 const overflowX = style.overflowX;
                 const scrollable =
@@ -358,14 +372,39 @@ export default class Lineage extends Plugin {
                         );
                     }
                     scrollableCount++;
+                    scrolledClasses.push(node.className?.toString().slice(0, 60) ?? node.tagName);
                 }
                 node = node.parentElement;
+            }
+            // Decisive diagnostics: where does the card actually live?
+            let parentChain = '';
+            let p: HTMLElement | null = el;
+            for (let i = 0; i < 6 && p; i++) {
+                parentChain +=
+                    `${p.tagName}.${(p.className?.toString() ?? '').slice(0, 40)}|`;
+                p = p.parentElement;
             }
             D?.(
                 'manual scroll: card=',
                 nodeId,
                 'scrollableAncestors=',
                 scrollableCount,
+                'scrolledClasses=',
+                scrolledClasses,
+                'cardInCurrentWindow=',
+                elDoc === window.document,
+                'cardInContainerEl=',
+                view.containerEl?.contains(el) ?? false,
+                'containerElInCurrentWindow=',
+                view.containerEl?.ownerDocument === window.document,
+                'leafWin===window=',
+                (view.leaf as unknown as { window?: Window }).window === window,
+                'inColumns=',
+                !!el.closest('.columns-container'),
+                'inMindmap=',
+                !!el.closest('.mindmap-container'),
+                'parentChain=',
+                parentChain,
                 'cardRect=',
                 cardRect.toJSON(),
             );
