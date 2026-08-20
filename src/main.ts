@@ -310,128 +310,144 @@ export default class Lineage extends Plugin {
         nodeId: string,
         D?: (msg: string, ...rest: unknown[]) => void,
     ): void {
-        const doScroll = (): boolean => {
+        const tryScroll = (): boolean => {
             const el = this.findCardElement(view, nodeId);
             if (!el) {
                 D?.(
                     'scrollCardIntoView: element NOT FOUND',
                     'containerEl.children=',
                     view.containerEl?.children.length ?? -1,
-                    'containerElChildClasses=',
-                    Array.from(view.containerEl?.children ?? []).map(
-                        (c) => (c as HTMLElement).className?.toString().slice(0, 40) ?? c.tagName,
-                    ),
                     'contentEl.children=',
                     (view as unknown as { contentEl?: HTMLElement }).contentEl
                         ?.children.length ?? -1,
-                    'cardInAnyWindow=',
-                    !!view.containerEl?.ownerDocument.getElementById(nodeId),
                 );
                 return false;
             }
-
-            // Scroll every scrollable ancestor so the card is centered.
-            //
-            // IMPORTANT 1: the card (and its scroll containers) may live in a
-            // DIFFERENT window than the one this code runs in (openmode=window
-            // opens a popout). So every DOM API here must use the element's OWN
-            // window/document, not the current window's.
-            //
-            // IMPORTANT 2: Lineage applies transform: scale(zoom) to .columns.
-            // getBoundingClientRect returns SCREEN pixels (post-transform), but
-            // scrollTop is in LAYOUT pixels. So the scroll delta must be divided
-            // by the zoom level (exactly what Lineage's own alignVertically does:
-            // column.scrollBy({ top: (scrollTop * -1) / zoomLevel })). Without
-            // this, the scroll lands in the wrong place whenever zoom != 1.
-            const elDoc = el.ownerDocument;
-            const elWin = elDoc.defaultView as Window;
-            const zoom =
-                view.plugin.settings.getValue().view.zoomLevel || 1;
-            const cardRectBefore = el.getBoundingClientRect();
-            let scrollableCount = 0;
-            const scrolled: { cls: string; dTop: number; dLeft: number }[] = [];
-            let node: HTMLElement | null = el.parentElement;
-            while (node && node !== elDoc.body) {
-                const style = elWin.getComputedStyle(node);
-                const overflowY = style.overflowY;
-                const overflowX = style.overflowX;
-                const scrollable =
-                    (overflowY === 'auto' || overflowY === 'scroll') &&
-                    node.scrollHeight > node.clientHeight + 1;
-                const scrollableX =
-                    (overflowX === 'auto' || overflowX === 'scroll') &&
-                    node.scrollWidth > node.clientWidth + 1;
-                if (scrollable || scrollableX) {
-                    const contRect = node.getBoundingClientRect();
-                    let dTop = 0;
-                    let dLeft = 0;
-                    if (scrollable) {
-                        dTop = Math.round(
-                            (cardRectBefore.top -
-                                contRect.top -
-                                (contRect.height - cardRectBefore.height) / 2) /
-                                zoom,
-                        );
-                        node.scrollTop += dTop;
-                    }
-                    if (scrollableX) {
-                        dLeft = Math.round(
-                            (cardRectBefore.left -
-                                contRect.left -
-                                (contRect.width - cardRectBefore.width) / 2) /
-                                zoom,
-                        );
-                        node.scrollLeft += dLeft;
-                    }
-                    scrollableCount++;
-                    scrolled.push({
-                        cls: node.className?.toString().slice(0, 40) ?? node.tagName,
-                        dTop,
-                        dLeft,
-                    });
-                }
-                node = node.parentElement;
+            // The card is in the DOM, but its window may not be focused yet.
+            // `openmode: 'window'` opens a popout that is NOT focused when this
+            // runs; scrolling it before it is focused has no visible effect (the
+            // scroll is "swallowed" by the time it takes the window to open).
+            // So wait until the card's own window is focused before scrolling.
+            const focused = el.ownerDocument.hasFocus();
+            if (!focused) {
+                D?.(
+                    'scrollCardIntoView: card found but its window is not focused yet, waiting',
+                );
+                return false;
             }
-            const cardRectAfter = el.getBoundingClientRect();
-            D?.(
-                'manual scroll: card=',
-                nodeId,
-                'zoom=',
-                zoom,
-                'scrollableAncestors=',
-                scrollableCount,
-                'scrolled=',
-                scrolled,
-                'cardTopBefore=',
-                Math.round(cardRectBefore.top),
-                'cardTopAfter=',
-                Math.round(cardRectAfter.top),
-                'cardInCurrentWindow=',
-                elDoc === window.document,
-                'containerElInCurrentWindow=',
-                view.containerEl?.ownerDocument === window.document,
-                'inColumns=',
-                !!el.closest('.columns-container'),
-            );
-            // Re-trigger Lineage's own align (centers the active node using its
-            // own zoom-aware logic) as a backup / to also scroll sibling columns.
-            try {
-                view.alignBranch.align({ type: 'view/align-branch/center-node' });
-            } catch (e) {
-                D?.('align re-trigger failed', e);
-            }
+            this.performScroll(view, el, nodeId, D);
             return true;
         };
-        if (!doScroll()) {
-            // The card may not be rendered yet (Svelte needs to update after
-            // the reducer state change). Retry a few times.
+        if (!tryScroll()) {
+            // The card may not be rendered yet (Svelte needs to update after the
+            // reducer state change) and/or its window may not be focused yet
+            // (openmode=window opens a popout). Retry until both are true.
             let attempts = 0;
             const interval = window.setInterval(() => {
-                if (doScroll() || ++attempts > 30) {
+                if (tryScroll() || ++attempts > 40) {
                     window.clearInterval(interval);
                 }
             }, 150);
-            window.setTimeout(() => window.clearInterval(interval), 5000);
+            window.setTimeout(() => window.clearInterval(interval), 6000);
+        }
+    }
+
+    /**
+     * Actually scrolls the card element into view. Must only be called once the
+     * card is in the DOM AND its window is focused (see scrollCardIntoView).
+     */
+    private performScroll(
+        view: LineageView,
+        el: HTMLElement,
+        nodeId: string,
+        D?: (msg: string, ...rest: unknown[]) => void,
+    ): void {
+        // Scroll every scrollable ancestor so the card is centered.
+        //
+        // IMPORTANT 1: the card (and its scroll containers) may live in a
+        // DIFFERENT window than the one this code runs in (openmode=window
+        // opens a popout). So every DOM API here must use the element's OWN
+        // window/document, not the current window's.
+        //
+        // IMPORTANT 2: Lineage applies transform: scale(zoom) to .columns.
+        // getBoundingClientRect returns SCREEN pixels (post-transform), but
+        // scrollTop is in LAYOUT pixels. So the scroll delta must be divided
+        // by the zoom level (exactly what Lineage's own alignVertically does:
+        // column.scrollBy({ top: (scrollTop * -1) / zoomLevel })). Without
+        // this, the scroll lands in the wrong place whenever zoom != 1.
+        const elDoc = el.ownerDocument;
+        const elWin = elDoc.defaultView as Window;
+        const zoom = view.plugin.settings.getValue().view.zoomLevel || 1;
+        const cardRectBefore = el.getBoundingClientRect();
+        let scrollableCount = 0;
+        const scrolled: { cls: string; dTop: number; dLeft: number }[] = [];
+        let node: HTMLElement | null = el.parentElement;
+        while (node && node !== elDoc.body) {
+            const style = elWin.getComputedStyle(node);
+            const overflowY = style.overflowY;
+            const overflowX = style.overflowX;
+            const scrollable =
+                (overflowY === 'auto' || overflowY === 'scroll') &&
+                node.scrollHeight > node.clientHeight + 1;
+            const scrollableX =
+                (overflowX === 'auto' || overflowX === 'scroll') &&
+                node.scrollWidth > node.clientWidth + 1;
+            if (scrollable || scrollableX) {
+                const contRect = node.getBoundingClientRect();
+                let dTop = 0;
+                let dLeft = 0;
+                if (scrollable) {
+                    dTop = Math.round(
+                        (cardRectBefore.top -
+                            contRect.top -
+                            (contRect.height - cardRectBefore.height) / 2) /
+                            zoom,
+                    );
+                    node.scrollTop += dTop;
+                }
+                if (scrollableX) {
+                    dLeft = Math.round(
+                        (cardRectBefore.left -
+                            contRect.left -
+                            (contRect.width - cardRectBefore.width) / 2) /
+                            zoom,
+                    );
+                    node.scrollLeft += dLeft;
+                }
+                scrollableCount++;
+                scrolled.push({
+                    cls: node.className?.toString().slice(0, 40) ?? node.tagName,
+                    dTop,
+                    dLeft,
+                });
+            }
+            node = node.parentElement;
+        }
+        const cardRectAfter = el.getBoundingClientRect();
+        D?.(
+            'manual scroll: card=',
+            nodeId,
+            'zoom=',
+            zoom,
+            'scrollableAncestors=',
+            scrollableCount,
+            'scrolled=',
+            scrolled,
+            'cardTopBefore=',
+            Math.round(cardRectBefore.top),
+            'cardTopAfter=',
+            Math.round(cardRectAfter.top),
+            'cardInCurrentWindow=',
+            elDoc === window.document,
+            'inColumns=',
+            !!el.closest('.columns-container'),
+        );
+        // Re-trigger Lineage's own align (centers the active node using its own
+        // zoom-aware logic) as a backup / to also scroll sibling columns.
+        try {
+            view.alignBranch.align({ type: 'view/align-branch/center-node' });
+        } catch (e) {
+            D?.('align re-trigger failed', e);
         }
     }
 
