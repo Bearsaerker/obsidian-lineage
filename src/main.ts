@@ -260,59 +260,72 @@ export default class Lineage extends Plugin {
         nodeId: string,
         D?: (msg: string, ...rest: unknown[]) => void,
     ): void {
-        const roots: (HTMLElement | null)[] = [
-            view.container,
-            view.containerEl,
-            document.querySelector('.lineage-view') as HTMLElement | null,
-        ];
         const doScroll = (): boolean => {
-            let el: HTMLElement | null = null;
-            for (const root of roots) {
-                el = root?.querySelector(
-                    `#${CSS.escape(nodeId)}`,
-                ) as HTMLElement | null;
-                if (el) break;
-            }
-            if (!el) {
-                el = document.getElementById(nodeId) as HTMLElement | null;
-            }
+            const el = this.findCardElement(view, nodeId);
             if (!el) {
                 D?.(
-                    'scrollCardIntoView: element NOT FOUND (attempt) container=',
-                    view.container ? 'set' : 'NULL',
+                    'scrollCardIntoView: element NOT FOUND',
                     'containerEl.children=',
                     view.containerEl?.children.length ?? -1,
+                    'contentEl.children=',
+                    (view as unknown as { contentEl?: HTMLElement }).contentEl
+                        ?.children.length ?? -1,
                 );
                 return false;
             }
 
-            // In mindmap mode cards are positioned with transform: translate()
-            // inside an overflow:auto container, so scrollIntoView (which uses
-            // the untransformed layout position) does nothing. Center the card
-            // in the .mindmap-container by scrolling to its transformed
-            // bounding-box position instead.
-            const mindmap = el.closest('.mindmap-container');
-            if (mindmap) {
-                const cardRect = el.getBoundingClientRect();
-                const contRect = mindmap.getBoundingClientRect();
-                mindmap.scrollLeft +=
-                    cardRect.left -
-                    contRect.left -
-                    (contRect.width - cardRect.width) / 2;
-                mindmap.scrollTop +=
-                    cardRect.top -
-                    contRect.top -
-                    (contRect.height - cardRect.height) / 2;
-                D?.('centered card in mindmap container: ', nodeId);
-                return true;
+            // Scroll every scrollable ancestor so the card is centered. Using
+            // getBoundingClientRect (which is already transform/zoom-corrected)
+            // is far more reliable than scrollIntoView, which miscalculates
+            // when Lineage applies transform: scale() zoom to .columns.
+            const cardRect = el.getBoundingClientRect();
+            let scrollableCount = 0;
+            let node: HTMLElement | null = el.parentElement;
+            while (node && node !== document.body) {
+                const style = window.getComputedStyle(node);
+                const overflowY = style.overflowY;
+                const overflowX = style.overflowX;
+                const scrollable =
+                    (overflowY === 'auto' || overflowY === 'scroll') &&
+                    node.scrollHeight > node.clientHeight + 1;
+                const scrollableX =
+                    (overflowX === 'auto' || overflowX === 'scroll') &&
+                    node.scrollWidth > node.clientWidth + 1;
+                if (scrollable || scrollableX) {
+                    const contRect = node.getBoundingClientRect();
+                    if (scrollable) {
+                        node.scrollTop += Math.round(
+                            cardRect.top -
+                                contRect.top -
+                                (contRect.height - cardRect.height) / 2,
+                        );
+                    }
+                    if (scrollableX) {
+                        node.scrollLeft += Math.round(
+                            cardRect.left -
+                                contRect.left -
+                                (contRect.width - cardRect.width) / 2,
+                        );
+                    }
+                    scrollableCount++;
+                }
+                node = node.parentElement;
             }
-
+            D?.(
+                'manual scroll: card=',
+                nodeId,
+                'scrollableAncestors=',
+                scrollableCount,
+                'cardRect=',
+                cardRect.toJSON(),
+            );
+            // Fall back to scrollIntoView as well (handles any container we may
+            // have missed, e.g. a transformed wrapper).
             el.scrollIntoView({
                 behavior: 'smooth',
                 block: 'nearest',
                 inline: 'nearest',
             });
-            D?.('scrolled card into view: ', nodeId);
             return true;
         };
         if (!doScroll()) {
@@ -326,6 +339,34 @@ export default class Lineage extends Plugin {
             }, 150);
             window.setTimeout(() => window.clearInterval(interval), 5000);
         }
+    }
+
+    /**
+     * Finds the card DOM element for `nodeId`, searching the correct window's
+     * document (the view may live in a popout window opened via openmode=window)
+     * and all candidate roots (container, containerEl, contentEl).
+     */
+    private findCardElement(
+        view: LineageView,
+        nodeId: string,
+    ): HTMLElement | null {
+        const doc =
+            view.containerEl?.ownerDocument ??
+            window.document;
+        const roots: (HTMLElement | null)[] = [
+            view.container,
+            view.containerEl,
+            (view as unknown as { contentEl?: HTMLElement }).contentEl ?? null,
+            doc.querySelector('.lineage-view') as HTMLElement | null,
+        ];
+        for (const root of roots) {
+            if (!root) continue;
+            const el = root.querySelector(
+                `#${CSS.escape(nodeId)}`,
+            ) as HTMLElement | null;
+            if (el) return el;
+        }
+        return doc.getElementById(nodeId) as HTMLElement | null;
     }
 
     /**
