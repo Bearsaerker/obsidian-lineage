@@ -231,19 +231,69 @@ export default class Lineage extends Plugin {
             snippet: (content[m]?.content ?? '').slice(0, 80),
         })));
         if (matches.length > 0) {
-            // The viewStore context (the document the reducer uses to resolve
-            // the active branch) can lag behind the documentStore after a
-            // reload, because node IDs are regenerated. Sync it with the
-            // current document first so navigation uses the same columns we
-            // matched against - otherwise updateActiveBranch throws
-            // "could not find group for node".
-            view.viewStore.setContext(view.documentStore.getValue().document);
-            D('dispatching set-active-node/mouse to id=', matches[0]);
-            view.viewStore.dispatch({
-                type: 'view/set-active-node/mouse',
-                payload: { id: matches[0] },
-            });
-            this.scrollCardIntoView(view, matches[0], D);
+            // `openmode: 'window'` opens the file in a new window, which creates a
+            // DUPLICATE Lineage leaf for the same file. `getActiveViewOfType` (used
+            // by waitForLineageView) returns the globally-active leaf, which may be
+            // the freshly-opened popout leaf that has NOT rendered its cards yet
+            // (empty contentEl). Navigating that leaf is a no-op. So we navigate
+            // EVERY Lineage leaf for the file that actually has the card rendered in
+            // its own DOM - whichever one is visible to the user gets revealed.
+            const allLeaves = this.app.workspace.getLeavesOfType(
+                LINEAGE_VIEW_TYPE,
+            );
+            const forFile = allLeaves.filter(
+                (l) => (l.view as LineageView)?.file?.path === filepath,
+            );
+            const activeLeaf = this.app.workspace.activeLeaf;
+            let navigated = 0;
+            for (const leaf of forFile) {
+                const v = leaf.view as LineageView;
+                // NOTE: do NOT gate navigation on a synchronous hasCard check.
+                // The card element may not be in the DOM yet (Svelte renders
+                // node IDs asynchronously, ~300ms after the document loads), so a
+                // synchronous check would skip every leaf. Instead we navigate
+                // every leaf and let scrollCardIntoView's retry wait for the card.
+                const hasCardNow = this.findCardElement(v, matches[0]) !== null;
+                const rendered =
+                    ((v as unknown as { contentEl?: HTMLElement }).contentEl
+                        ?.children.length ??
+                        0) >
+                    0 ||
+                    !!v.containerEl.querySelector(
+                        '.columns-container, .mindmap-container',
+                    );
+                D(
+                    'leaf',
+                    v.id,
+                    'isActiveLeaf=',
+                    leaf === activeLeaf,
+                    'hasCardNow=',
+                    hasCardNow,
+                    'rendered=',
+                    rendered,
+                );
+                // Clear any active search filter on THIS view so all cards are
+                // revealed (an active query with empty results hides every card).
+                v.viewStore.dispatch({
+                    type: 'view/search/set-query',
+                    payload: { query: '' },
+                });
+                // The viewStore context (the document the reducer uses to resolve
+                // the active branch) can lag behind the documentStore after a
+                // reload, because node IDs are regenerated. Sync it with the
+                // current document first so navigation uses the same columns we
+                // matched against - otherwise updateActiveBranch throws
+                // "could not find group for node".
+                v.viewStore.setContext(v.documentStore.getValue().document);
+                D('dispatching set-active-node/mouse to id=', matches[0], 'on leaf', v.id);
+                v.viewStore.dispatch({
+                    type: 'view/set-active-node/mouse',
+                    payload: { id: matches[0] },
+                });
+                this.scrollCardIntoView(v, matches[0], D);
+                navigated++;
+            }
+            D('navigated leaves=', navigated);
         }
         D('returning match count=', matches.length);
         return matches.length;
