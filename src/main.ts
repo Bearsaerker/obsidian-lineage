@@ -109,29 +109,67 @@ export default class Lineage extends Plugin {
      *          Lineage document (or no Lineage view is available).
      */
     async findAndOpenCards(searchText: string, filepath?: string): Promise<number> {
+        const D = (msg: string, ...rest: unknown[]) =>
+            /* eslint-disable-next-line no-console */
+            console.log(`[FindAndOpenCards] ${msg}`, ...rest);
+        D('start search=', JSON.stringify(searchText), 'filepath=', filepath);
+
         if (filepath) {
-            if (!this.isLineageDocument(filepath)) return -1;
+            D('isLineageDocument=', this.isLineageDocument(filepath));
+            if (!this.isLineageDocument(filepath)) {
+                D('NOT a lineage document, returning -1');
+                return -1;
+            }
             const file = this.app.vault.getAbstractFileByPath(filepath);
-            if (!(file instanceof TFile)) return -1;
+            if (!(file instanceof TFile)) {
+                D('file not found in vault, returning -1');
+                return -1;
+            }
 
             const existingLeaf = getLeafOfFile(this, file, LINEAGE_VIEW_TYPE);
+            D('existingLineageLeaf=', existingLeaf ? 'YES' : 'NO');
             if (!existingLeaf) {
                 const markdownLeaf = getLeafOfFile(this, file, 'markdown');
+                D('existingMarkdownLeaf=', markdownLeaf ? 'YES' : 'NO');
                 if (markdownLeaf) {
                     // Convert the markdown leaf into a Lineage view.
+                    D('converting markdown leaf -> lineage');
                     toggleObsidianViewType(this, markdownLeaf, 'lineage');
                 } else {
+                    D('opening new tab + converting -> lineage');
                     const leaf = await openFile(this, file, 'tab');
                     toggleObsidianViewType(this, leaf, 'lineage');
                 }
             }
         }
 
-        const view = await this.waitForLineageView(filepath);
-        if (!view) return -1;
+        const view = await this.waitForLineageView(filepath, D);
+        D('view after wait =', view ? `${view.file?.path} contentKeys=${Object.keys(view.documentStore.getValue().document.content).length}` : 'null');
+        if (!view) {
+            D('no lineage view available, returning -1');
+            return -1;
+        }
 
-        const query = this.normalizeSearchQuery(String(searchText ?? ''));
+        // Ensure the view's leaf is active and focused so align/scroll runs.
+        try {
+            this.app.workspace.setActiveLeaf(view.leaf, { focus: true });
+        } catch (e) {
+            D('setActiveLeaf failed', e);
+        }
+
+        const rawQuery = String(searchText ?? '');
+        const query = this.normalizeSearchQuery(rawQuery);
+        D('query normalized: from=', JSON.stringify(rawQuery), 'to=', JSON.stringify(query));
         if (query.length === 0) return 0;
+
+        // Sample the content we are matching against.
+        const content = view.documentStore.getValue().document.content;
+        const contentKeys = Object.keys(content);
+        D('contentKeys=', contentKeys.length, 'sampleFirst3=', contentKeys.slice(0, 3));
+        D('content snippets=', contentKeys.slice(0, 5).map((k) => ({
+            id: k,
+            content: (content[k]?.content ?? '').slice(0, 80),
+        })));
 
         // Dispatch through Lineage's own search action so matching cards get
         // highlighted and the first match activated (same as the built-in box).
@@ -140,18 +178,31 @@ export default class Lineage extends Plugin {
             payload: { query },
         });
         const fuseCount = view.viewStore.getValue().search.results.size;
-        if (fuseCount > 0) return fuseCount;
+        D('fuseCount after set-query dispatch =', fuseCount);
+        if (fuseCount > 0) {
+            const ids = Array.from(
+                view.viewStore.getValue().search.results.keys(),
+            );
+            D('fuse matched nodeIds=', ids);
+            return fuseCount;
+        }
 
         // The Fuse search uses exact whole-query matching by default (threshold
         // 0) and can miss chunk text that differs in casing, whitespace or
         // formatting. Fall back to a tolerant scan over the raw card content.
-        const matches = this.findMatchingLineageNodeIds(view, query);
+        const matches = this.findMatchingLineageNodeIds(view, query, D);
+        D('fallback matches=', matches, matches.map((m) => ({
+            id: m,
+            snippet: (content[m]?.content ?? '').slice(0, 80),
+        })));
         if (matches.length > 0) {
+            D('dispatching set-active-node/mouse to id=', matches[0]);
             view.viewStore.dispatch({
                 type: 'view/set-active-node/mouse',
                 payload: { id: matches[0] },
             });
         }
+        D('returning match count=', matches.length);
         return matches.length;
     }
 
@@ -172,9 +223,14 @@ export default class Lineage extends Plugin {
      * 2. Fallback: score each card by how many of the query's words it contains
      *    and return the best-scoring cards (covers chunks spanning cards).
      */
-    private findMatchingLineageNodeIds(view: LineageView, query: string): string[] {
+    private findMatchingLineageNodeIds(
+        view: LineageView,
+        query: string,
+        D?: (msg: string, ...rest: unknown[]) => void,
+    ): string[] {
         const content = view.documentStore.getValue().document.content;
         const normalizedQuery = this.normalizeSearchQuery(query).toLowerCase();
+        D?.('fallback: normalizedQuery=', JSON.stringify(normalizedQuery), 'cardCount=', Object.keys(content).length);
         const wholePhraseMatches: string[] = [];
         for (const [nodeId, nodeData] of Object.entries(content)) {
             const cardContent = this.normalizeSearchQuery(
@@ -184,11 +240,13 @@ export default class Lineage extends Plugin {
                 wholePhraseMatches.push(nodeId);
             }
         }
+        D?.('fallback wholePhraseMatches=', wholePhraseMatches);
         if (wholePhraseMatches.length > 0) return wholePhraseMatches;
 
         const tokens = normalizedQuery
             .split(' ')
             .filter((t) => t.length >= 3);
+        D?.('fallback tokens=', tokens);
         if (tokens.length === 0) return [];
 
         const scored: { id: string; score: number }[] = [];
@@ -202,10 +260,13 @@ export default class Lineage extends Plugin {
             }
             if (score > 0) scored.push({ id: nodeId, score });
         }
+        D?.('fallback scored=', scored);
         if (scored.length === 0) return [];
         scored.sort((a, b) => b.score - a.score);
         const topScore = scored[0].score;
-        return scored.filter((s) => s.score === topScore).map((s) => s.id);
+        const top = scored.filter((s) => s.score === topScore).map((s) => s.id);
+        D?.('fallback topScore=', topScore, 'topIds=', top);
+        return top;
     }
 
     /**
@@ -214,6 +275,7 @@ export default class Lineage extends Plugin {
      */
     private async waitForLineageView(
         filepath?: string,
+        D?: (msg: string, ...rest: unknown[]) => void,
     ): Promise<LineageView | null> {
         const deadline = Date.now() + 3000;
         let view = this.app.workspace.getActiveViewOfType(LineageView);
@@ -224,10 +286,12 @@ export default class Lineage extends Plugin {
                 const hasContent =
                     Object.keys(view.documentStore.getValue().document.content)
                         .length > 0;
+                D?.(`waitForLineageView poll: path=${view.file.path} matchesPath=${matchesPath} hasContent=${hasContent}`);
                 if (matchesPath && hasContent) return view;
             }
             await delay(25);
         }
+        D?.('waitForLineageView TIMEOUT (3s)');
         return view;
     }
 
