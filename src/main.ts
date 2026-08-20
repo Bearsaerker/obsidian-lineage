@@ -1,4 +1,4 @@
-import { Plugin, WorkspaceLeaf } from 'obsidian';
+import { Plugin, TFile, WorkspaceLeaf } from 'obsidian';
 import { LINEAGE_VIEW_TYPE, LineageView } from './view/view';
 import { createSetViewState } from 'src/obsidian/patches/create-set-view-state';
 import { around } from 'monkey-around';
@@ -23,7 +23,11 @@ import { customIcons, loadCustomIcons } from 'src/helpers/load-custom-icons';
 import { setActiveLeaf } from 'src/obsidian/patches/set-active-leaf';
 import { migrateSettings } from 'src/stores/settings/migrations/migrate-settings';
 import { toggleFileViewType } from 'src/obsidian/events/workspace/effects/toggle-file-view-type';
+import { toggleObsidianViewType } from 'src/obsidian/events/workspace/effects/toggle-obsidian-view-type';
 import { getActiveFile } from 'src/obsidian/commands/helpers/get-active-file';
+import { getLeafOfFile } from 'src/obsidian/events/workspace/helpers/get-leaf-of-file';
+import { openFile } from 'src/obsidian/events/workspace/effects/open-file';
+import { delay } from 'src/helpers/delay';
 import { createLineageDocument } from 'src/obsidian/events/workspace/effects/create-lineage-document';
 import { registerFilesMenuEvent } from 'src/obsidian/events/workspace/register-files-menu-event';
 import { removeHtmlElementMarkerInPreviewMode } from 'src/obsidian/markdown-post-processors/remove-html-element-marker-in-preview-mode';
@@ -76,6 +80,87 @@ export default class Lineage extends Plugin {
      */
     clearNodeHighlights(nodeId: string): void {
         clearHighlights(nodeId);
+    }
+
+    /**
+     * Returns true if the file at `path` is configured to open in a Lineage view.
+     *
+     * @param filepath - The path of the file to check
+     */
+    isLineageDocument(filepath: string): boolean {
+        return (
+            this.settings.getValue().documents[filepath]?.viewType === 'lineage'
+        );
+    }
+
+    /**
+     * Open the Lineage cards that contain `searchText` and focus the first
+     * matching card.
+     *
+     * This is the public API used by external plugins (e.g. Advanced URI) to
+     * deep-link into the cards that contain a given piece of text.
+     *
+     * If `filepath` is provided and is a Lineage document that is not yet open
+     * in a Lineage view, it is opened in a Lineage view first.
+     *
+     * @param searchText - The text to search for in the cards
+     * @param filepath - Optional path of the Lineage document to search
+     * @returns The number of matching cards, or `-1` if the file is not a
+     *          Lineage document (or no Lineage view is available).
+     */
+    async findAndOpenCards(searchText: string, filepath?: string): Promise<number> {
+        if (filepath) {
+            if (!this.isLineageDocument(filepath)) return -1;
+            const file = this.app.vault.getAbstractFileByPath(filepath);
+            if (!(file instanceof TFile)) return -1;
+
+            const existingLeaf = getLeafOfFile(this, file, LINEAGE_VIEW_TYPE);
+            if (!existingLeaf) {
+                const markdownLeaf = getLeafOfFile(this, file, 'markdown');
+                if (markdownLeaf) {
+                    // Convert the markdown leaf into a Lineage view.
+                    toggleObsidianViewType(this, markdownLeaf, 'lineage');
+                } else {
+                    const leaf = await openFile(this, file, 'tab');
+                    toggleObsidianViewType(this, leaf, 'lineage');
+                }
+            }
+        }
+
+        const view = await this.waitForLineageView(filepath);
+        if (!view) return -1;
+
+        const query = String(searchText ?? '');
+        view.viewStore.dispatch({
+            type: 'view/search/set-query',
+            payload: { query },
+        });
+        if (query.length === 0) return 0;
+
+        return view.viewStore.getValue().search.results.size;
+    }
+
+    /**
+     * Waits until the active LineageView has loaded the document at `filepath`
+     * (or the active view document when `filepath` is omitted).
+     */
+    private async waitForLineageView(
+        filepath?: string,
+    ): Promise<LineageView | null> {
+        const deadline = Date.now() + 3000;
+        let view = this.app.workspace.getActiveViewOfType(LineageView);
+        while (Date.now() < deadline) {
+            view = this.app.workspace.getActiveViewOfType(LineageView);
+            if (view && view.file) {
+                const matchesPath = !filepath || view.file.path === filepath;
+                const hasContent =
+                    Object.keys(view.documentStore.getValue().document.content)
+                        .length > 0;
+                if (matchesPath && hasContent) return view;
+            }
+            await delay(25);
+        }
+        return view;
     }
 
     async onload() {
