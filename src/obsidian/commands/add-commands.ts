@@ -275,6 +275,19 @@ const createCommands = (plugin: Lineage) => {
     });
 
     commands.push({
+        name: lang.cmd_toggle_zen_mode,
+        icon: 'focus',
+        checkCallback: (checking) => {
+            const view = getActiveLineageView(plugin);
+            if (checking) {
+                return Boolean(view);
+            }
+            if (!view) return;
+            view.viewStore.dispatch({ type: 'view/zen/toggle' });
+        },
+    });
+
+    commands.push({
         name: lang.cmd_space_between_cards,
         icon: customIcons.gap.name,
         checkCallback: (checking) => {

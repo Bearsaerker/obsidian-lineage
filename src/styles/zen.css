@@ -1,0 +1,42 @@
+/* Zen mode — hide all Obsidian UI chrome so only the Lineage cards remain.
+   The `lineage-zen-mode` class is toggled on <body> while an active Lineage
+   view is in zen mode. All selectors target Obsidian's built-in workspace
+   chrome, NOT Lineage's own components (which are hidden in main.svelte). */
+body.lineage-zen-mode {
+    /* Hide the current view's header bar (file name, breadcrumbs, etc.). */
+    & .view-header {
+        display: none;
+    }
+
+    /* Hide the tab bar: the tabs themselves, plus the backward / forward
+       navigation arrows and the tab-options menu. */
+    & .workspace-tabs .workspace-tab-header-container,
+    & .workspace-tab-header-container {
+        display: none;
+    }
+
+    /* Hide the far-left icon ribbon (also when collapsed). */
+    & .workspace-ribbon.mod-left,
+    & .workspace-ribbon.side-dock-ribbon.mod-left.is-collapsed {
+        display: none;
+    }
+
+    /* Hide the window titlebar buttons (minimize / maximize / close). */
+    & .titlebar-button.mod-minimize,
+    & .titlebar-button.mod-maximize,
+    & .titlebar-button.mod-close {
+        display: none;
+    }
+
+    /* Remove the left (file explorer / bookmarks) and right (outline etc.)
+       sidebars so the card board gets the full width. */
+    & .workspace-split.mod-left-split,
+    & .workspace-split.mod-right-split {
+        display: none;
+    }
+
+    /* Remove the status bar at the very bottom. */
+    & .status-bar {
+        display: none;
+    }
+}

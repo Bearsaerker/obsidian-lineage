@@ -9,7 +9,7 @@
     import Hotkeys from 'src/view/components/container/modals/hotkeys/hotkeys.svelte';
     import { LineageView } from '../../view';
     import Lineage from '../../../main';
-    import { setContext } from 'svelte';
+    import { setContext, onMount, onDestroy } from 'svelte';
     import { uiControlsStore } from 'src/stores/view/derived/ui-controls-store';
     import { viewHotkeysAction } from 'src/view/actions/keyboard-shortcuts/view-hotkeys-action';
     import { mouseWheelZoom } from 'src/view/actions/mouse-wheel-zoom';
@@ -25,6 +25,65 @@
     setContext('plugin', plugin);
     setContext('view', view);
     const controls = uiControlsStore(view);
+
+    // When this view is BOTH active and in zen mode, hide Obsidian's own UI
+    // chrome (tabs, nav arrows, ribbon, sidebars, status bar) by adding a
+    // class to <body>. The matching CSS lives in src/styles/zen.css.
+    const ZEN_MODE_CLASS = 'lineage-zen-mode';
+    // Incremented on active-leaf-change (and once in onMount) to force the
+    // reactive block below to re-evaluate. We deliberately derive the active
+    // state fresh via getActiveViewOfType inside the block rather than relying
+    // on a stored boolean, so toggling zen always re-checks the current view
+    // (the active-leaf-change event does not fire when the view is already
+    // active and the leaf never changes).
+    let activeLeafVersion = 0;
+
+    onMount(() => {
+        plugin.registerEvent(
+            plugin.app.workspace.on('active-leaf-change', () => {
+                activeLeafVersion++;
+            }),
+        );
+        // The listener only fires on change; bump once so the initial state is
+        // evaluated immediately.
+        activeLeafVersion++;
+    });
+
+    $: {
+        // Referencing the counter registers it as a reactive dependency, so
+        // the block re-runs whenever the active leaf changes (and once at
+        // mount via the onMount bump).
+        void activeLeafVersion;
+        const isActive =
+            plugin.app.workspace.getActiveViewOfType(LineageView) === view;
+        const shouldHide =
+            isActive && Boolean($controls) && $controls.zenMode === true;
+        if (shouldHide) {
+            console.log('[zen-mode] adding body class', ZEN_MODE_CLASS, {
+                isActive,
+                zenMode: $controls?.zenMode,
+                bodyHasClass: document.body.hasClass(ZEN_MODE_CLASS),
+                bodyClassList: document.body.className,
+            });
+            document.body.addClass(ZEN_MODE_CLASS);
+        } else {
+            if (document.body.hasClass(ZEN_MODE_CLASS)) {
+                console.log('[zen-mode] removing body class', ZEN_MODE_CLASS, {
+                    isActive,
+                    zenMode: $controls?.zenMode,
+                    currentView: view.file?.path,
+                });
+            }
+            document.body.removeClass(ZEN_MODE_CLASS);
+        }
+    }
+
+    // If this view is destroyed while zen mode is active (e.g. the tab is
+    // closed), make sure the global body class is removed so Obsidian's UI
+    // is not left hidden.
+    onDestroy(() => {
+        document.body.removeClass(ZEN_MODE_CLASS);
+    });
 </script>
 
 <div
@@ -37,10 +96,12 @@
 
     <div class={`lineage-main`} use:mouseWheelZoom={view} use:clickAndDrag="{view}">
         <Container />
-        <Toolbar />
-        <Breadcrumbs />
-        <VerticalToolbar />
-        <ZoomButtons/>
+        {#if !$controls.zenMode}
+            <Toolbar />
+            <Breadcrumbs />
+            <VerticalToolbar />
+            <ZoomButtons />
+        {/if}
         {#if $controls.showHistorySidebar}
             <FileHistory />
         {:else if $controls.showHelpSidebar}
@@ -53,7 +114,9 @@
 
         <DNDEdges />
     </div>
-    <RightSidebar />
+    {#if !$controls.zenMode}
+        <RightSidebar />
+    {/if}
 </div>
 
 <style>

@@ -57,6 +57,7 @@ export type ViewState = {
             showSettingsSidebar: boolean;
             showStyleRulesModal: boolean;
             showLeftSidebar: boolean;
+            zenMode: boolean;
         };
     };
     document: DocumentViewState;

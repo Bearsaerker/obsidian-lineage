@@ -16,6 +16,7 @@ export const defaultViewState = (): ViewState => ({
             showSettingsSidebar: false,
             showStyleRulesModal: false,
             showLeftSidebar: false,
+            zenMode: false,
         },
     },
     document: {

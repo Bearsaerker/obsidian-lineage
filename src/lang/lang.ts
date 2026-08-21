@@ -275,6 +275,7 @@ export const lang = {
     controls_toggle_minimap: 'Document minimap',
     cmd_toggle_minimap: 'Toggle document minimap',
     cmd_toggle_left_sidebar: 'Toggle left sidebar',
+    cmd_toggle_zen_mode: 'Toggle zen mode',
 
     // recent sections
     sidebar_tab_recent_nodes: 'Recently selected sections',
