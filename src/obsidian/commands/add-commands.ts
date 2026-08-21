@@ -20,6 +20,8 @@ import { ejectDocument } from 'src/obsidian/commands/helpers/export-document/eje
 import { isSidebarActive } from 'src/view/actions/keyboard-shortcuts/helpers/commands/commands/helpers/sidebar-navigation';
 import { getActiveGlobalCardContext } from 'src/view/components/global-categories/helpers/global-view-keyboard';
 import type { LineageView } from 'src/view/view';
+import { resolveAddTarget } from 'src/obsidian/commands/helpers/add-card-to-global-category';
+import { openAddToGlobalCategoryModal } from 'src/view/modals/add-to-global-category/add-to-global-category-modal';
 
 const createCommands = (plugin: Lineage) => {
     const commands: (Omit<Command, 'id' | 'callback'> & {
@@ -299,6 +301,17 @@ const createCommands = (plugin: Lineage) => {
             view.plugin.settings.dispatch({
                 type: 'view/modes/gap-between-cards/toggle',
             });
+        },
+    });
+
+    commands.push({
+        name: lang.cmd_add_card_to_global_category,
+        icon: 'tag',
+        checkCallback: (checking) => {
+            const target = resolveAddTarget(plugin);
+            if (checking) return Boolean(target);
+            if (!target) return false;
+            openAddToGlobalCategoryModal(plugin, target);
         },
     });
 
