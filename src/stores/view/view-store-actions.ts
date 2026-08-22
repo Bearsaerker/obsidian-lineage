@@ -44,7 +44,6 @@ export type ViewUIAction =
     | ToggleHistorySidebarAction
     | ToggleSettingsSidebarAction
     | ToggleLeftSidebarAction
-    | ToggleZenModeAction
     | { type: 'view/close-modals'; payload?: { closeAllModals: boolean } }
     | { type: 'view/style-rules/toggle-modal' };
 
@@ -99,9 +98,6 @@ type ToggleSettingsSidebarAction = {
 };
 type ToggleLeftSidebarAction = {
     type: 'view/left-sidebar/toggle';
-};
-type ToggleZenModeAction = {
-    type: 'view/zen/toggle';
 };
 type SetActiveNodeAction = {
     type: `view/set-active-node/${'mouse' | 'mouse-silent' | 'search' | 'document'}`;

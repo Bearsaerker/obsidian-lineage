@@ -280,12 +280,14 @@ const createCommands = (plugin: Lineage) => {
         name: lang.cmd_toggle_zen_mode,
         icon: 'focus',
         checkCallback: (checking) => {
-            const view = getActiveLineageView(plugin);
+            const isZenOn = plugin.store.getValue().zenMode;
             if (checking) {
-                return Boolean(view);
+                // Always available while zen is on (so it can be turned off
+                // from any view); otherwise only on a Lineage view (to turn it
+                // on).
+                return isZenOn || Boolean(getActiveLineageView(plugin));
             }
-            if (!view) return;
-            view.viewStore.dispatch({ type: 'view/zen/toggle' });
+            plugin.store.dispatch({ type: 'plugin/zen/toggle' });
         },
     });
 

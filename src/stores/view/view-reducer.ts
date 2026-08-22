@@ -60,7 +60,6 @@ const updateDocumentState = (
             showSettingsSidebar: false,
             showStyleRulesModal: false,
             showLeftSidebar: state.ui.controls.showLeftSidebar,
-            zenMode: state.ui.controls.zenMode,
         };
     } else if (action.type === 'view/hotkeys/toggle-modal') {
         const showHelpSidebar = state.ui.controls.showHelpSidebar;
@@ -70,7 +69,6 @@ const updateDocumentState = (
             showSettingsSidebar: false,
             showStyleRulesModal: false,
             showLeftSidebar: state.ui.controls.showLeftSidebar,
-            zenMode: state.ui.controls.zenMode,
         };
     } else if (action.type === 'view/settings/toggle-modal') {
         const showSettingsSidebar = state.ui.controls.showSettingsSidebar;
@@ -80,18 +78,12 @@ const updateDocumentState = (
             showSettingsSidebar: !showSettingsSidebar,
             showStyleRulesModal: false,
             showLeftSidebar: state.ui.controls.showLeftSidebar,
-            zenMode: state.ui.controls.zenMode,
         };
     } else if (action.type === 'view/left-sidebar/toggle') {
         const showLeftSidebar = state.ui.controls.showLeftSidebar;
         state.ui.controls = {
             ...state.ui.controls,
             showLeftSidebar: !showLeftSidebar,
-        };
-    } else if (action.type === 'view/zen/toggle') {
-        state.ui.controls = {
-            ...state.ui.controls,
-            zenMode: !state.ui.controls.zenMode,
         };
     } else if (action.type === 'view/close-modals') {
         state.ui.controls = {
@@ -102,7 +94,6 @@ const updateDocumentState = (
             showSettingsSidebar: false,
             showStyleRulesModal: false,
             showLeftSidebar: state.ui.controls.showLeftSidebar,
-            zenMode: state.ui.controls.zenMode,
         };
     } else if (action.type === 'view/editor/enable-main-editor') {
         if (state.document.activeNode !== action.payload.nodeId) {
@@ -198,7 +189,6 @@ const updateDocumentState = (
             showSettingsSidebar: false,
             showHelpSidebar: false,
             showLeftSidebar: state.ui.controls.showLeftSidebar,
-            zenMode: state.ui.controls.zenMode,
         };
     } else if (action.type === 'view/style-rules/update-results') {
         if (!action.payload.results) {

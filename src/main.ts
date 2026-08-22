@@ -50,6 +50,10 @@ import {
 } from 'src/obsidian/views/global-categories-view';
 import { openGlobalCategoriesView } from 'src/obsidian/events/workspace/effects/open-global-categories-view';
 import { lang } from 'src/lang/lang';
+import {
+    ZEN_MODE_CLASS,
+    subscribeZenModeToBody,
+} from 'src/obsidian/zen/zen-mode';
 
 export type SettingsStore = Store<Settings, SettingsActions>;
 export type PluginStore = Store<PluginState, PluginStoreActions>;
@@ -60,6 +64,7 @@ export default class Lineage extends Plugin {
     statusBar: StatusBar;
     private timeoutReferences: Set<ReturnType<typeof setTimeout>> = new Set();
     viewType: DocumentsPreferences = {};
+    private zenModeSubscription: (() => void) | null = null;
 
     /**
      * Register highlights for a Lineage node.
@@ -482,6 +487,10 @@ export default class Lineage extends Plugin {
         this.registerMarkdownPostProcessor(
             removeHtmlElementMarkerInPreviewMode,
         );
+        // Global zen mode: hide Obsidian's native chrome (tabs, ribbon,
+        // sidebars, status bar, titlebar buttons) while on. Managed here so it
+        // is independent of any single Lineage view being open.
+        this.zenModeSubscription = subscribeZenModeToBody(this);
     }
 
     async saveSettings() {
@@ -542,6 +551,11 @@ export default class Lineage extends Plugin {
 
     onunload() {
         super.onunload();
+        if (this.zenModeSubscription) {
+            this.zenModeSubscription();
+            this.zenModeSubscription = null;
+        }
+        document.body.removeClass(ZEN_MODE_CLASS);
         for (const timeout of this.timeoutReferences) {
             clearTimeout(timeout);
         }
