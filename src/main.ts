@@ -54,6 +54,12 @@ import {
     ZEN_MODE_CLASS,
     subscribeZenModeToBody,
 } from 'src/obsidian/zen/zen-mode';
+import {
+    LineageCardPopoverView,
+    LINEAGE_CARD_POPOVER_VIEW_TYPE,
+} from 'src/obsidian/views/card-popover-view';
+import { getDocumentStoreForFile } from 'src/view/components/global-categories/helpers/document-store-manager';
+import { DocumentState } from 'src/stores/document/document-state-type';
 
 export type SettingsStore = Store<Settings, SettingsActions>;
 export type PluginStore = Store<PluginState, PluginStoreActions>;
@@ -73,7 +79,10 @@ export default class Lineage extends Plugin {
      * @param nodeId - The Lineage node ID
      * @param highlights - Array of highlights to register
      */
-    registerNodeHighlights(nodeId: string, highlights: ExternalHighlight[]): void {
+    registerNodeHighlights(
+        nodeId: string,
+        highlights: ExternalHighlight[],
+    ): void {
         registerHighlights(nodeId, highlights);
     }
 
@@ -113,7 +122,10 @@ export default class Lineage extends Plugin {
      * @returns The number of matching cards, or `-1` if the file is not a
      *          Lineage document (or no Lineage view is available).
      */
-    async findAndOpenCards(searchText: string, filepath?: string): Promise<number> {
+    async findAndOpenCards(
+        searchText: string,
+        filepath?: string,
+    ): Promise<number> {
         if (filepath) {
             if (!this.isLineageDocument(filepath)) {
                 return -1;
@@ -192,7 +204,10 @@ export default class Lineage extends Plugin {
             // The Fuse search uses exact whole-query matching by default (threshold
             // 0) and can miss chunk text that differs in casing, whitespace or
             // formatting. Fall back to a tolerant scan over the raw card content.
-            const matches = this.findMatchingLineageNodeIds(view, query);
+            const matches = this.findMatchingLineageNodeIds(
+                view.documentStore.getValue(),
+                query,
+            );
             targetId = matches[0];
             resultCount = matches.length;
         }
@@ -204,9 +219,8 @@ export default class Lineage extends Plugin {
             // (empty contentEl). Navigating that leaf is a no-op. So we navigate
             // EVERY Lineage leaf for the file that actually has the card rendered in
             // its own DOM - whichever one is visible to the user gets revealed.
-            const allLeaves = this.app.workspace.getLeavesOfType(
-                LINEAGE_VIEW_TYPE,
-            );
+            const allLeaves =
+                this.app.workspace.getLeavesOfType(LINEAGE_VIEW_TYPE);
             const forFile = allLeaves.filter(
                 (l) => (l.view as LineageView)?.file?.path === filepath,
             );
@@ -341,9 +355,7 @@ export default class Lineage extends Plugin {
         view: LineageView,
         nodeId: string,
     ): HTMLElement | null {
-        const doc =
-            view.containerEl?.ownerDocument ??
-            window.document;
+        const doc = view.containerEl?.ownerDocument ?? window.document;
         const roots: (HTMLElement | null)[] = [
             view.container,
             view.containerEl,
@@ -369,14 +381,94 @@ export default class Lineage extends Plugin {
     }
 
     /**
-     * Tolerant search for cards containing `query`, handling the case where the
-     * query is a longer chunk that does not appear verbatim (as a single exact
-     * substring) in any card.
+     * Open the card of `file` referenced by an Obsidian link subpath
+     * (`"#^blockid"` or `"#Heading"`) inside `leaf` — typically the leaf of
+     * a hover popover (Hover Editor). Only that ONE card is rendered, using
+     * the same card view as the global categories view; it is fully editable
+     * and changes are saved back to the file.
      *
-     * 1. Whole-phrase match (case-insensitive, whitespace-normalized).
-     * 2. Fallback: score each card by how many of the query's words it contains
-     *    and return the best-scoring cards (covers chunks spanning cards).
+     * Public API for external plugins. Duck-type this method before calling
+     * it, and fall back to standard Obsidian navigation when it resolves to
+     * `false`.
+     *
+     * @returns `true` when the card view was opened, `false` when the file is
+     *          not a Lineage document or the subpath could not be resolved to
+     *          a card (the caller should fall back).
      */
+    async openCardPopover(
+        leaf: WorkspaceLeaf,
+        file: TFile,
+        subpath?: string,
+    ): Promise<boolean> {
+        if (!subpath || file.extension !== 'md') return false;
+        if (!this.isLineageDocument(file.path)) return false;
+
+        // Reuses the store of an already open Lineage view (live-sync) or a
+        // lazily created background store that persists edits to disk.
+        const { documentStore } = await getDocumentStoreForFile(this, file);
+        const documentState = documentStore.getValue();
+        if (Object.keys(documentState.document.content).length === 0) {
+            return false;
+        }
+
+        const nodeId = this.resolveSubpathToNodeId(documentState, subpath);
+        if (!nodeId) return false;
+
+        await leaf.setViewState({ type: LINEAGE_CARD_POPOVER_VIEW_TYPE });
+        const view = leaf.view;
+        if (!(view instanceof LineageCardPopoverView)) return false;
+        await view.showCard(file, nodeId);
+        return true;
+    }
+
+    /**
+     * Resolve an Obsidian link subpath to the Lineage card containing it.
+     *
+     * Supported subpaths:
+     * - `"#^blockid"` — block references created with Lineage's "Copy link to
+     *   block": the id is appended to the card's last content line, so a
+     *   word-bounded match of the `^id` token identifies the card precisely.
+     * - `"#Heading"` / `"#Parent#Child"` — resolved with the same tolerant
+     *   text search over the card contents that `findAndOpenCards` uses
+     *   (Lineage sections are tree indexes, not markdown headings).
+     *
+     * @returns the node id, or `null` when nothing matches.
+     */
+    private resolveSubpathToNodeId(
+        documentState: DocumentState,
+        subpath: string,
+    ): string | null {
+        if (!subpath) return null;
+
+        const blockId = /^#?\^([a-zA-Z0-9-]+)/.exec(subpath)?.[1];
+        if (blockId) {
+            const escaped = blockId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const token = new RegExp(`(^|\\s)\\^${escaped}(\\s|$)`);
+            for (const nodeId of this.getValidNodeIds(documentState)) {
+                const content = documentState.document.content[nodeId]?.content;
+                if (content && token.test(content)) return nodeId;
+            }
+            return null;
+        }
+
+        // heading-style subpath: match the last segment against card contents
+        const heading = subpath.replace(/^#+/, '').split('#').pop()?.trim();
+        if (!heading) return null;
+        const matches = this.findMatchingLineageNodeIds(documentState, heading);
+        return matches[0] ?? null;
+    }
+
+    /** Node ids that are actually part of the live column tree. */
+    private getValidNodeIds(documentState: DocumentState): string[] {
+        const validIds: string[] = [];
+        for (const column of documentState.document.columns) {
+            for (const group of column.groups) {
+                for (const nodeId of group.nodes) validIds.push(nodeId);
+            }
+        }
+        return validIds;
+    }
+
     /**
      * Tolerant search for cards containing `query`, handling the case where the
      * query is a longer chunk that does not appear verbatim (as a single exact
@@ -392,16 +484,10 @@ export default class Lineage extends Plugin {
      *    and return the best-scoring cards (covers chunks spanning cards).
      */
     private findMatchingLineageNodeIds(
-        view: LineageView,
+        documentState: DocumentState,
         query: string,
     ): string[] {
-        const documentState = view.documentStore.getValue();
-        const validIds = new Set<string>();
-        for (const column of documentState.document.columns) {
-            for (const group of column.groups) {
-                for (const nodeId of group.nodes) validIds.add(nodeId);
-            }
-        }
+        const validIds = this.getValidNodeIds(documentState);
 
         const content = documentState.document.content;
         const normalizedQuery = this.normalizeSearchQuery(query).toLowerCase();
@@ -416,9 +502,7 @@ export default class Lineage extends Plugin {
         }
         if (wholePhraseMatches.length > 0) return wholePhraseMatches;
 
-        const tokens = normalizedQuery
-            .split(' ')
-            .filter((t) => t.length >= 3);
+        const tokens = normalizedQuery.split(' ').filter((t) => t.length >= 3);
         if (tokens.length === 0) return [];
 
         const scored: { id: string; score: number }[] = [];
@@ -478,6 +562,10 @@ export default class Lineage extends Plugin {
         this.registerView(
             GLOBAL_CATEGORIES_VIEW_TYPE,
             (leaf) => new GlobalCategoriesView(leaf, this),
+        );
+        this.registerView(
+            LINEAGE_CARD_POPOVER_VIEW_TYPE,
+            (leaf) => new LineageCardPopoverView(leaf, this),
         );
         addCommands(this);
         this.registerPatches();

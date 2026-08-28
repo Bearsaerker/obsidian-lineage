@@ -11,6 +11,12 @@ import { LineageDocumentFormat } from 'src/stores/settings/settings-type';
 export type VirtualView = LineageView & {
     /** replace the DOM container the card subtree uses for focus/link queries */
     setContainer: (el: HTMLElement | null) => void;
+    /**
+     * Unsubscribers registered while populating the view (document-store
+     * subscriptions). Collected so the view can be torn down without leaking
+     * listeners on the (possibly shared/background) document store.
+     */
+    unsubscribers?: (() => void)[];
 };
 
 /**
@@ -36,6 +42,7 @@ export class VirtualLineageView extends Component {
     isActive = false;
     isViewOfFile = true;
     saveDocument: () => Promise<void> = async () => {};
+    unsubscribers: (() => void)[] = [];
 
     setContainer(el: HTMLElement | null) {
         this.container = el;
@@ -62,8 +69,15 @@ export const populateVirtualView = async (
     view: VirtualLineageView,
     options: PopulateVirtualViewOptions,
 ) => {
-    const { plugin, file, documentStore, viewStore, leaf, containerEl, format } =
-        options;
+    const {
+        plugin,
+        file,
+        documentStore,
+        viewStore,
+        leaf,
+        containerEl,
+        format,
+    } = options;
 
     view.plugin = plugin;
     view.file = file;
@@ -77,18 +91,22 @@ export const populateVirtualView = async (
 
     // Keep the view-store context pointing at this file's document so the
     // view reducer (active-branch/outline updates) never sees a stale doc.
-    documentStore.subscribe((state) => {
-        viewStore.setContext(state.document);
-    });
+    // Subscriptions are tracked on the view so `disposeVirtualView` can
+    // remove them again (the stores may outlive the view).
+    view.unsubscribers = view.unsubscribers ?? [];
+    view.unsubscribers.push(
+        documentStore.subscribe((state) => {
+            viewStore.setContext(state.document);
+        }),
+    );
     viewStore.setContext(documentStore.getValue().document);
 
     const updateData = (state: DocumentState) => {
         view.data =
-            state.file.frontmatter +
-            stringifyDocument(state.document, format);
+            state.file.frontmatter + stringifyDocument(state.document, format);
     };
     updateData(documentStore.getValue());
-    documentStore.subscribe(updateData);
+    view.unsubscribers.push(documentStore.subscribe(updateData));
 
     view.inlineEditor = new InlineEditor(view as unknown as LineageView);
     await view.inlineEditor.onload();
@@ -102,4 +120,24 @@ export const createVirtualView = async (
     const view = new VirtualLineageView();
     await populateVirtualView(view, options);
     return view as unknown as VirtualView;
+};
+
+/**
+ * Tear a virtual view down: unloads the inline editor (saving any pending
+ * edit) and unsubscribes from the document store. Call this when the host
+ * (e.g. a popover) closes — the document store itself may live on.
+ */
+export const disposeVirtualView = async (view: VirtualView) => {
+    try {
+        await view.inlineEditor?.unloadFile?.();
+    } catch (e) {
+        // the editor may never have been fully initialised - ignore
+    }
+    for (const unsubscribe of (view.unsubscribers ?? []).splice(0)) {
+        try {
+            unsubscribe();
+        } catch (e) {
+            // ignore individual teardown failures
+        }
+    }
 };
