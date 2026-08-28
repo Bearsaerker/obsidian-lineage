@@ -14,6 +14,7 @@
     import { ZenModeStore } from 'src/stores/plugin/derived/zen-mode-store';
     import { viewHotkeysAction } from 'src/view/actions/keyboard-shortcuts/view-hotkeys-action';
     import { mouseWheelZoom } from 'src/view/actions/mouse-wheel-zoom';
+    import SearchBar from './toolbar/components/search-bar.svelte';
     import RightSidebar from './right-sidebar/right-sidebar.svelte';
     import { clickAndDrag } from 'src/view/actions/click-and-drag/click-and-drag';
     import LeftSidebar from 'src/view/components/container/left-sidebar/left-sidebar.svelte';
@@ -42,13 +43,22 @@
 >
     <LeftSidebar />
 
-    <div class={`lineage-main`} use:mouseWheelZoom={view} use:clickAndDrag="{view}">
+    <div
+        class={`lineage-main`}
+        use:mouseWheelZoom={view}
+        use:clickAndDrag={view}
+    >
         <Container />
         {#if !$zenMode}
             <Toolbar />
             <Breadcrumbs />
             <VerticalToolbar />
             <ZoomButtons />
+        {:else}
+            <!-- Keep search available in Zen mode: the toolbar that normally
+                 hosts it is hidden, so render the search bar on its own
+                 (it shows nothing unless the user toggles it with Alt+F or /). -->
+            <SearchBar />
         {/if}
         {#if $controls.showHistorySidebar}
             <FileHistory />
@@ -77,8 +87,6 @@
         width: 0; /* ensures it shrinks properly when the minimap is visible */
         position: relative;
     }
-
-
 
     .lineage-view {
         background-color: var(--background-container);
