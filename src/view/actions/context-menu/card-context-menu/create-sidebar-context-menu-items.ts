@@ -5,6 +5,7 @@ import { copyLinkToBlock } from 'src/view/actions/context-menu/card-context-menu
 import { copyActiveNodesToClipboard } from 'src/view/actions/keyboard-shortcuts/helpers/commands/commands/helpers/clipboard/copy-active-nodes-to-clipboard';
 import { persistPinnedNodes } from 'src/stores/view/subscriptions/actions/persist-pinned-nodes';
 import { NewCategoryModal } from 'src/view/modals/new-category-modal/new-category-modal';
+import { revealInMainView } from 'src/view/actions/context-menu/card-context-menu/helpers/reveal-in-main-view';
 import {
     globalCategoryValue,
     isGlobalCategoryValue,
@@ -74,8 +75,7 @@ const createGlobalCategorySubmenu = (
     nodes: GlobalCategoryNode[],
 ): MenuItemObject[] => {
     const documentState = view.documentStore.getValue();
-    const currentValue =
-        documentState.pinnedNodes.nodeToCategory[activeNode];
+    const currentValue = documentState.pinnedNodes.nodeToCategory[activeNode];
 
     const items: MenuItemObject[] = [];
     for (const node of nodes) {
@@ -272,6 +272,17 @@ export const createSidebarContextMenuItems = (
             submenu: createCategorySubmenu(view, activeNode),
         },
         { type: 'separator' },
+        // Reveal in the main document view. Pinned cards only (the recent
+        // cards list is not in the main document hierarchy the same way).
+        ...(isInRecentCardsList
+            ? []
+            : [
+                  {
+                      title: lang.cm_reveal_in_main_view,
+                      icon: 'pin',
+                      action: () => revealInMainView(view, activeNode),
+                  },
+              ]),
         {
             title: isPinned
                 ? lang.cm_unpin_from_left_sidebar

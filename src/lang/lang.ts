@@ -285,13 +285,15 @@ export const lang = {
     cm_unpin_from_left_sidebar: 'Unpin from left sidebar',
     cm_pin_in_left_sidebar: 'Pin in left sidebar',
     cm_reveal_in_left_sidebar: 'Reveal in left sidebar',
+    cm_reveal_in_main_view: 'Reveal in main view',
     cmd_toggle_pin_in_left_sidebar: `Toggle 'pin section in left sidebar'`,
     sidebar_tab_pinned_nodes: 'Pinned sections',
     sidebar_no_pinned_nodes: 'No pinned sections',
 
     // similar cards
     sidebar_tab_similar_cards: 'Similar cards',
-    sidebar_no_similar_cards: 'No similar cards found.\nRun "Find: Similar chunks from selection" to populate.',
+    sidebar_no_similar_cards:
+        'No similar cards found.\nRun "Find: Similar chunks from selection" to populate.',
     similar_cards_query: 'Search query:',
     similar_cards_score: 'Similarity:',
     similar_cards_score_label: (pct: number) => `${pct}% similar`,
