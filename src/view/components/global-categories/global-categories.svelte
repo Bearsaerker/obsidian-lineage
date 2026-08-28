@@ -5,13 +5,8 @@
     import GlobalCategoriesTree from './components/tree/global-categories-tree.svelte';
     import GlobalCategoryCards from './components/cards/global-category-cards.svelte';
     import GlobalCategorySelectors from './components/selectors/global-category-selectors.svelte';
-    import {
-        GlobalCategories,
-    } from 'src/stores/settings/types/global-categories-types';
-    import {
-        aggregateCardsForSelection,
-        findNode,
-    } from './helpers/tree-utils';
+    import { GlobalCategories } from 'src/stores/settings/types/global-categories-types';
+    import { aggregateCardsForSelection, findNode } from './helpers/tree-utils';
     import { lang } from 'src/lang/lang';
     import { Store } from 'src/lib/store/store';
     import { defaultViewState } from 'src/stores/view/default-view-state';
@@ -26,12 +21,19 @@
     import {
         globalCardListStore,
         globalViewStore,
+        globalVirtualViewsStore,
     } from './helpers/global-view-keyboard';
     import { globalViewHotkeysAction } from './helpers/global-view-hotkeys-action';
     import {
         scrollToFirstSearchResult,
         jumpToSearchResult,
     } from './helpers/global-view-keyboard';
+    import {
+        globalRevealRequestStore,
+        GlobalRevealRequest,
+    } from './helpers/reveal-in-global-view';
+    import { delay } from 'src/helpers/delay';
+    import { get } from 'svelte/store';
     import { updateGlobalSearchResults } from './helpers/global-document-search';
     import GlobalSearchInput from './components/selectors/gc-search-input.svelte';
 
@@ -45,7 +47,12 @@
         ViewState,
         ViewStoreAction,
         LineageDocument
-    >(defaultViewState(), viewReducer, onPluginError, defaultDocumentState().document);
+    >(
+        defaultViewState(),
+        viewReducer,
+        onPluginError,
+        defaultDocumentState().document,
+    );
 
     let selectedFolderId: string | null = null;
     let selectedCategoryId: string | null = null;
@@ -61,9 +68,69 @@
         }
     };
 
+    /**
+     * Select the category owning the revealed card and scroll to the card
+     * (resolving its node id from the per-file virtual view, which mounts
+     * asynchronously the first time a file appears in this view).
+     */
+    const applyReveal = async (req: GlobalRevealRequest) => {
+        const node = findNode(categories.tree, req.categoryId);
+        if (!node || node.type !== 'category') return;
+        selectedFolderId = node.parentId;
+        selectedCategoryId = node.id;
+        focusRoot();
+
+        const deadline = Date.now() + 4000;
+        let resolvedNodeId: string | null = null;
+        while (Date.now() < deadline && !resolvedNodeId) {
+            const view = get(globalVirtualViewsStore)[req.filePath];
+            resolvedNodeId =
+                view?.documentStore.getValue().sections.section_id[
+                    req.section
+                ] ?? null;
+            if (!resolvedNodeId) await delay(50);
+        }
+        if (!resolvedNodeId) return;
+
+        viewStore.dispatch({
+            type: 'view/pinned-nodes/set-active-node',
+            payload: { id: resolvedNodeId },
+        });
+        viewStore.dispatch({
+            type: 'view/recent-nodes/set-active-node',
+            payload: { id: resolvedNodeId },
+        });
+
+        // wait for the card to be in the DOM (async re-render after the
+        // selection change), then scroll it into view
+        const scrollDeadline = Date.now() + 4000;
+        while (Date.now() < scrollDeadline) {
+            const el = rootEl.querySelector(`[id="${resolvedNodeId}"]`);
+            if (el) {
+                el.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+                return;
+            }
+            await delay(50);
+        }
+    };
+
     onMount(() => {
         globalViewStore.set(viewStore);
         focusRoot();
+        // a reveal may have been requested before the view was opened
+        const pending = get(globalRevealRequestStore);
+        if (pending) {
+            globalRevealRequestStore.set(null);
+            applyReveal(pending);
+        }
+    });
+
+    // apply reveal requests made while the view is already mounted
+    const unsubscribeReveal = globalRevealRequestStore.subscribe((req) => {
+        if (req) {
+            globalRevealRequestStore.set(null);
+            applyReveal(req);
+        }
     });
 
     // Refocus the container when the active card changes (e.g. after clicking
@@ -150,6 +217,7 @@
         unsubscribeView();
         unsubscribeSettings();
         unsubscribeViewSearch();
+        unsubscribeReveal();
         globalCardListStore.set([]);
         globalViewStore.set(null);
     });
@@ -233,9 +301,11 @@
                 newParentId = target.id;
                 index = target.children.length;
             } else {
-                const siblings = target.parentId === null
-                    ? categories.tree
-                    : findNode(categories.tree, target.parentId)?.children ?? null;
+                const siblings =
+                    target.parentId === null
+                        ? categories.tree
+                        : findNode(categories.tree, target.parentId)
+                              ?.children ?? null;
                 if (!siblings) return;
                 const targetIndex = siblings.findIndex(
                     (n) => n.id === targetId,
@@ -308,10 +378,7 @@
         {#if $viewStore.search.showInput}
             <div class="gc-search-bar">
                 <div class="gc-input-fill">
-                    <GlobalSearchInput
-                        {viewStore}
-                        onActivateNext={jump}
-                    />
+                    <GlobalSearchInput {viewStore} onActivateNext={jump} />
                 </div>
                 <div class="gc-search-nav">
                     <button

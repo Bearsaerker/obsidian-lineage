@@ -326,10 +326,17 @@ export const lang = {
     add_to_global_category_select_category: 'Select a category',
     add_to_global_category_create_directory: 'New directory…',
     add_to_global_category_create_category: 'New category…',
+    add_to_global_category_not_in_any:
+        'This card is not in any global category',
+    add_to_global_category_in_categories: 'Already in global category:',
+    add_to_global_category_reveal: 'Reveal in global view',
     global_categories_view_title: 'Global categories',
-    global_categories_empty_tree: 'No folders or categories yet. Right-click to create one.',
-    global_categories_empty_cards: 'No cards in this selection yet. Pin a card in the sidebar and add it to a global category.',
-    global_categories_select_node: 'Select a folder or category to see its cards.',
+    global_categories_empty_tree:
+        'No folders or categories yet. Right-click to create one.',
+    global_categories_empty_cards:
+        'No cards in this selection yet. Pin a card in the sidebar and add it to a global category.',
+    global_categories_select_node:
+        'Select a folder or category to see its cards.',
     global_categories_open_in_file: 'Open "{filename}" in the Lineage view',
     global_categories_move_up: 'Move card up',
     global_categories_move_down: 'Move card down',

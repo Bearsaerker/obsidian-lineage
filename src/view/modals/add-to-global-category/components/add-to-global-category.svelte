@@ -11,8 +11,10 @@
         collectCategoryIdsInSubtree,
         findNode,
         flattenTree,
+        getCategoriesForCard,
         getDisplayPath,
     } from 'src/view/components/global-categories/helpers/tree-utils';
+    import { revealCardInGlobalView } from 'src/view/components/global-categories/helpers/reveal-in-global-view';
 
     export let plugin: Lineage;
     export let target: AddTarget;
@@ -24,6 +26,22 @@
     let folderId: string | null = null;
     let query = '';
     let inputEl: HTMLInputElement;
+
+    // The global categories this card is already in (id + display path).
+    $: existingCategories = getCategoriesForCard(
+        plugin.settings.getValue().categories,
+        target.filePath,
+        target.section,
+    );
+
+    const reveal = (categoryId: string) => {
+        revealCardInGlobalView(plugin, {
+            categoryId,
+            filePath: target.filePath,
+            section: target.section,
+        });
+        onClose();
+    };
 
     // All folder nodes (any depth) in the tree.
     $: folderNodes = flattenTree(
@@ -43,7 +61,10 @@
         { value: null, label: lang.global_categories_all_directories },
         ...folderNodes.map((n) => ({
             value: n.id,
-            label: getDisplayPath(plugin.settings.getValue().categories.tree, n.id),
+            label: getDisplayPath(
+                plugin.settings.getValue().categories.tree,
+                n.id,
+            ),
         })),
     ];
 
@@ -138,12 +159,36 @@
     };
 </script>
 
-<div
-    class="atgc"
-    on:keydown|stopPropagation
->
+<div class="atgc" on:keydown|stopPropagation>
+    <div class="atgc__existing">
+        {#if existingCategories.length === 0}
+            <div class="atgc__existing--none">
+                {lang.add_to_global_category_not_in_any}
+            </div>
+        {:else}
+            <div class="atgc__existing-label">
+                {lang.add_to_global_category_in_categories}
+            </div>
+            {#each existingCategories as cat (cat.id)}
+                <button
+                    type="button"
+                    class="atgc__existing-item"
+                    on:click={() => reveal(cat.id)}
+                    title={cat.path}
+                >
+                    <span class="atgc__existing-path">{cat.path}</span>
+                    <span class="atgc__existing-reveal">
+                        {lang.add_to_global_category_reveal}
+                    </span>
+                </button>
+            {/each}
+        {/if}
+    </div>
+
     {#if step === 'directory'}
-        <div class="atgc__section">{lang.add_to_global_category_select_directory}</div>
+        <div class="atgc__section">
+            {lang.add_to_global_category_select_directory}
+        </div>
     {:else}
         <div class="atgc__section">
             <button type="button" class="atgc__back" on:click={goBackOrClose}>
@@ -157,11 +202,9 @@
         bind:this={inputEl}
         bind:value={query}
         class="atgc__search"
-        placeholder={
-            step === 'directory'
-                ? lang.global_categories_search_directory
-                : lang.global_categories_search_category
-        }
+        placeholder={step === 'directory'
+            ? lang.global_categories_search_directory
+            : lang.global_categories_search_category}
         on:keydown={onKeydown}
     />
 
@@ -201,6 +244,58 @@
         flex-direction: column;
         gap: 8px;
         min-height: 220px;
+    }
+
+    .atgc__existing {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        border: 1px solid var(--background-modifier-border);
+        border-radius: 4px;
+        padding: 6px 8px;
+        background-color: var(--background-secondary);
+    }
+
+    .atgc__existing--none {
+        color: var(--text-muted);
+        font-size: var(--font-ui-small);
+    }
+
+    .atgc__existing-label {
+        color: var(--text-muted);
+        font-size: var(--font-ui-small);
+        font-weight: var(--font-semibold);
+    }
+
+    .atgc__existing-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        text-align: left;
+        padding: 4px 8px;
+        border: none;
+        border-radius: 4px;
+        background: none;
+        cursor: pointer;
+        font-size: var(--font-ui-small);
+    }
+
+    .atgc__existing-item:hover {
+        background-color: var(--background-modifier-hover);
+    }
+
+    .atgc__existing-path {
+        color: var(--text-normal);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .atgc__existing-reveal {
+        flex: 0 0 auto;
+        color: var(--text-accent);
+        font-weight: var(--font-semibold);
     }
 
     .atgc__section {

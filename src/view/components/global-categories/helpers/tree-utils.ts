@@ -138,9 +138,7 @@ export const getDisplayPath = (
     const node = findNode(nodes, nodeId);
     if (!node) return '';
     const parentPath =
-        node.parentId === null
-            ? ''
-            : getDisplayPath(nodes, node.parentId);
+        node.parentId === null ? '' : getDisplayPath(nodes, node.parentId);
     return parentPath ? `${parentPath} / ${node.name}` : node.name;
 };
 
@@ -156,3 +154,24 @@ export const getCategoryEntries = (
     flattenTree(nodes)
         .filter((n) => n.type === 'category')
         .map((n) => ({ id: n.id, path: getDisplayPath(nodes, n.id) }));
+
+/**
+ * The global categories (ids + display paths) a given card already belongs
+ * to, keyed by its stable (filePath, section) reference.
+ */
+export const getCategoriesForCard = (
+    categories: GlobalCategories,
+    filePath: string,
+    section: string,
+): GlobalCategoryEntry[] => {
+    const entries: GlobalCategoryEntry[] = [];
+    for (const [categoryId, cards] of Object.entries(categories.globalCards)) {
+        if (
+            cards.some((c) => c.filePath === filePath && c.section === section)
+        ) {
+            const path = getDisplayPath(categories.tree, categoryId);
+            if (path) entries.push({ id: categoryId, path });
+        }
+    }
+    return entries;
+};

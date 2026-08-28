@@ -7,6 +7,7 @@ import {
     findNode,
     flattenTree,
     getCategoryEntries,
+    getCategoriesForCard,
     getDisplayPath,
     getParentNodes,
 } from 'src/view/components/global-categories/helpers/tree-utils';
@@ -75,10 +76,9 @@ describe('findNode / flattenTree / getParentNodes', () => {
 
     it('returns the correct sibling array', () => {
         const categories = buildFixture();
-        expect(getParentNodes(categories.tree, 'gc1')?.map((n) => n.id)).toEqual([
-            'gc2',
-            'gc3',
-        ]);
+        expect(
+            getParentNodes(categories.tree, 'gc1')?.map((n) => n.id),
+        ).toEqual(['gc2', 'gc3']);
         expect(getParentNodes(categories.tree, null)).toBe(categories.tree);
         expect(getParentNodes(categories.tree, 'gc2')).toBeNull();
     });
@@ -87,17 +87,16 @@ describe('findNode / flattenTree / getParentNodes', () => {
 describe('collectCategoryIdsInSubtree', () => {
     it('returns only its own id for a category', () => {
         const categories = buildFixture();
-        expect(collectCategoryIdsInSubtree(findNode(categories.tree, 'gc2')!)).toEqual([
-            'gc2',
-        ]);
+        expect(
+            collectCategoryIdsInSubtree(findNode(categories.tree, 'gc2')!),
+        ).toEqual(['gc2']);
     });
 
     it('returns all descendant category ids for a folder', () => {
         const categories = buildFixture();
-        expect(collectCategoryIdsInSubtree(findNode(categories.tree, 'gc1')!)).toEqual([
-            'gc2',
-            'gc3',
-        ]);
+        expect(
+            collectCategoryIdsInSubtree(findNode(categories.tree, 'gc1')!),
+        ).toEqual(['gc2', 'gc3']);
     });
 });
 
@@ -155,12 +154,7 @@ describe('aggregateCardsForSelection (folder + category selectors)', () => {
         const categories = buildFixture();
         const all = aggregateCardsForSelection(categories, null, null);
         expect(all).toHaveLength(4);
-        expect(all.map((c) => c.section)).toEqual([
-            '1.2',
-            '2.1',
-            '3.1',
-            '1.1',
-        ]);
+        expect(all.map((c) => c.section)).toEqual(['1.2', '2.1', '3.1', '1.1']);
     });
 });
 
@@ -181,6 +175,28 @@ describe('getDisplayPath / getCategoryEntries', () => {
         expect(getCategoryEntries(categories.tree)).toEqual([
             { id: 'gc2', path: 'Davidson / similarity responses' },
             { id: 'gc3', path: 'Davidson / radical interpretation' },
+            { id: 'gc5', path: 'Quine / similarity responses' },
+        ]);
+    });
+});
+
+describe('getCategoriesForCard', () => {
+    it('finds every category a card belongs to (with display paths)', () => {
+        const categories = buildFixture();
+        expect(getCategoriesForCard(categories, 'a.md', '1.2')).toEqual([
+            { id: 'gc2', path: 'Davidson / similarity responses' },
+        ]);
+        expect(getCategoriesForCard(categories, 'nope.md', '1.2')).toEqual([]);
+    });
+
+    it('a card in multiple categories lists all of them', () => {
+        const categories = buildFixture();
+        categories.globalCards.gc5 = [
+            ...(categories.globalCards.gc5 ?? []),
+            { filePath: 'a.md', section: '1.2' },
+        ];
+        expect(getCategoriesForCard(categories, 'a.md', '1.2')).toEqual([
+            { id: 'gc2', path: 'Davidson / similarity responses' },
             { id: 'gc5', path: 'Quine / similarity responses' },
         ]);
     });
